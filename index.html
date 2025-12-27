@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Workout Log</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-title">Workout Log</div>
+      <div class="app-subtitle" id="subtitle">Ready.</div>
+    </div>
+    <div class="header-right">
+      <button class="ghost" id="btnHistory" aria-label="History">History</button>
+      <button class="ghost" id="btnSettings" aria-label="Settings">Settings</button>
+    </div>
+  </header>
+
+  <main id="app" class="app-main">
+    <!-- Home -->
+    <section id="viewHome" class="view active">
+      <div class="card">
+        <h2>Workouts</h2>
+        <div class="grid">
+          <button class="primary big" data-start-template="w1">Chest, Arms &amp; Stomach</button>
+          <button class="primary big" data-start-template="w2">Shoulders, Back &amp; Stomach</button>
+          <button class="primary big" data-start-template="w3">Legs &amp; Core</button>
+        </div>
+        <div class="row">
+          <button class="secondary" id="btnCardioOnly">Cardio Only</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Quick tips</h2>
+        <ul class="list">
+          <li>Tap an exercise to log sets fast.</li>
+          <li>Each exercise shows <b>Last</b>, <b>Best</b>, and your saved <b>Action Next Time</b>.</li>
+          <li>Finish workout → <b>Export to ChatGPT</b> copies a coaching report to paste here.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Workout -->
+    <section id="viewWorkout" class="view">
+      <div class="card">
+        <div class="workout-header">
+          <div>
+            <div class="kicker" id="workoutKicker">Workout</div>
+            <h2 id="workoutTitle">—</h2>
+            <div class="meta" id="workoutMeta">—</div>
+          </div>
+          <div class="workout-actions">
+            <button class="secondary" id="btnPauseWorkout">Pause</button>
+            <button class="danger" id="btnFinishWorkout">Finish</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Cardio (optional)</h3>
+        <div class="form">
+          <label>
+            Type
+            <select id="cardioType">
+              <option value="">— none —</option>
+              <option value="Treadmill">Treadmill</option>
+              <option value="Cross trainer">Cross trainer</option>
+              <option value="Step machine">Step machine</option>
+              <option value="Outside run">Outside run</option>
+            </select>
+          </label>
+          <label>
+            Duration (minutes)
+            <input id="cardioMins" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 20" />
+          </label>
+          <label>
+            Notes (optional)
+            <input id="cardioNotes" placeholder="speed/incline/resistance/distance etc." />
+          </label>
+          <button class="secondary" id="btnSaveCardio">Save cardio</button>
+        </div>
+        <div class="mini" id="cardioSavedText"></div>
+      </div>
+
+      <div class="card">
+        <h3>Exercises</h3>
+        <div id="exerciseList" class="exercise-list"></div>
+      </div>
+    </section>
+
+    <!-- History -->
+    <section id="viewHistory" class="view">
+      <div class="card">
+        <div class="row space-between">
+          <h2>History</h2>
+          <button class="secondary" id="btnBackFromHistory">Back</button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <div class="row">
+          <button class="danger" id="btnClearAll">Clear all data (this device)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Finish -->
+    <section id="viewFinish" class="view">
+      <div class="card">
+        <div class="row space-between">
+          <h2>Session saved</h2>
+          <button class="secondary" id="btnDone">Done</button>
+        </div>
+        <div class="summary" id="finishSummary"></div>
+        <div class="row">
+          <button class="primary" id="btnExportChatGPT">Export to ChatGPT (copy)</button>
+          <button class="secondary" id="btnOpenChatGPT">Open ChatGPT</button>
+        </div>
+        <div class="mini" id="exportStatus"></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="viewSettings" class="view">
+      <div class="card">
+        <div class="row space-between">
+          <h2>Settings</h2>
+          <button class="secondary" id="btnBackFromSettings">Back</button>
+        </div>
+
+        <div class="form">
+          <label>
+            Max weight (kg) for dropdowns
+            <input id="maxWeight" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 200" />
+          </label>
+          <label class="inline">
+            <input type="checkbox" id="showBestToggle" />
+            Show all-time Best (in addition to Last)
+          </label>
+          <button class="secondary" id="btnSaveSettings">Save settings</button>
+        </div>
+
+        <hr class="sep"/>
+
+        <h3>Backup</h3>
+        <div class="row">
+          <button class="secondary" id="btnExportBackup">Export backup (JSON)</button>
+          <label class="file">
+            <input type="file" id="fileImport" accept="application/json" />
+            <span class="secondary buttonlike">Import backup</span>
+          </label>
+        </div>
+
+        <div class="mini" id="settingsStatus"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Exercise Modal -->
+  <div class="modal" id="exerciseModal" aria-hidden="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <div class="kicker" id="modalKicker">Exercise</div>
+          <h2 id="modalTitle">—</h2>
+          <div class="mini" id="modalLastBest">—</div>
+          <div class="mini" id="modalActionHint">—</div>
+        </div>
+        <button class="ghost" id="btnCloseModal" aria-label="Close">Close</button>
+      </div>
+
+      <div class="form">
+        <label>
+          Sets
+          <select id="setCount">
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="setsContainer" class="sets"></div>
+
+      <div class="form">
+        <label>
+          Notes (optional)
+          <input id="exerciseNotes" placeholder="e.g., slow negatives / felt strong / shoulder tweak" />
+        </label>
+      </div>
+
+      <div class="modal-footer">
+        <button class="secondary" id="btnActionNext">Action next time</button>
+        <button class="primary" id="btnSaveExercise">Save exercise</button>
+      </div>
+
+      <div class="mini" id="modalStatus"></div>
+    </div>
+  </div>
+
+  <!-- Action Modal -->
+  <div class="modal" id="actionModal" aria-hidden="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <div class="kicker">Action next time</div>
+          <h2 id="actionTitle">—</h2>
+          <div class="mini" id="actionSuggestion">—</div>
+        </div>
+        <button class="ghost" id="btnCloseAction" aria-label="Close">Close</button>
+      </div>
+      <div class="form">
+        <label>
+          Saved action (shown next time)
+          <textarea id="actionText" rows="4" placeholder="e.g., Add +2.5kg if you hit 10 reps on sets 1–2"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="btnUseSuggestion">Use suggestion</button>
+        <button class="primary" id="btnSaveAction">Save action</button>
+      </div>
+      <div class="mini" id="actionStatus"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
