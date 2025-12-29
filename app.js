@@ -1061,6 +1061,6 @@
     await registerSW();
     setSubtitle("Ready. (Add to Home Screen in Safari)");
   }
-
+const CACHE_NAME = "workout-log-v2"; // bump version each update
   init();
 })();
