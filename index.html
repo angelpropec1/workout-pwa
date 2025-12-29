@@ -23,7 +23,52 @@
   <main id="app" class="app-main">
     <!-- Home -->
     <section id="viewHome" class="view active">
-      <div class="card">
+            <div class="card">
+        <h2>Daily</h2>
+
+        <div class="mini" id="dailyDateText">Today</div>
+
+        <div class="row space-between">
+          <div>
+            <div class="kicker">Protein target</div>
+            <div style="font-size:22px; font-weight:900;" id="proteinTargetText">180g</div>
+          </div>
+          <div>
+            <div class="kicker">Consumed</div>
+            <div style="font-size:22px; font-weight:900;" id="proteinConsumedText">0g</div>
+          </div>
+          <div>
+            <div class="kicker">Left</div>
+            <div style="font-size:22px; font-weight:900;" id="proteinLeftText">180g</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="secondary" id="btnAdd10">+10g</button>
+          <button class="secondary" id="btnAdd20">+20g</button>
+          <button class="secondary" id="btnAdd30">+30g</button>
+        </div>
+
+        <div class="row" style="width:100%;">
+          <input id="proteinAddInput" inputmode="numeric" pattern="[0-9]*" placeholder="Add grams (e.g., 35)" style="flex:1;" />
+          <button class="primary" id="btnAddProtein">Add</button>
+          <button class="danger" id="btnResetProtein">Reset</button>
+        </div>
+
+        <label class="inline" style="margin-top:10px;">
+          <input type="checkbox" id="chkCreatine" />
+          Creatine taken today
+        </label>
+
+        <hr class="sep"/>
+
+        <h3>Protein history (last 7 days)</h3>
+        <div id="proteinHistoryList" class="history-list"></div>
+
+        <div class="mini" id="dailyStatus"></div>
+      </div>
+
+<div class="card">
         <h2>Workouts</h2>
         <div class="grid">
           <button class="primary big" data-start-template="w1">Chest, Arms &amp; Stomach</button>
@@ -229,5 +274,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-<!-- deploy -->

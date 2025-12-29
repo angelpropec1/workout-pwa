@@ -93,11 +93,12 @@
     reps: 10,
     maxWeightKg: 200,
     showBest: true,
+    proteinTarget: 180,
   };
 
   // ---------- IndexedDB ----------
   const DB_NAME = "workout_log_db";
-  const DB_VER = 1;
+  const DB_VER = 2;
   let db = null;
 
   function idbOpen() {
@@ -117,6 +118,9 @@
         }
         if (!d.objectStoreNames.contains("actions")) {
           d.createObjectStore("actions", { keyPath:"exerciseId" }); // {exerciseId, text, updatedAt}
+        }
+        if (!d.objectStoreNames.contains("daily")) {
+          d.createObjectStore("daily", { keyPath:"id" });
         }
         if (!d.objectStoreNames.contains("settings")) {
           d.createObjectStore("settings", { keyPath:"id" }); // {id:"settings", ...}
@@ -193,6 +197,8 @@
     currentExerciseDraft: null, // {exerciseId, sets, notes, setEntries:[{weightKg,reps}]}
     cachedStats: new Map(), // exerciseId -> { last, best }
     cachedActions: new Map(), // exerciseId -> actionText
+    daily: null,
+    dailyKey: "",
   };
 
   // ---------- Views ----------
@@ -802,6 +808,129 @@
     if (state.currentWorkout) await renderExerciseList();
   }
 
+  // ---------- Daily Protein + Creatine (local, resets by date) ----------
+  function todayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  async function loadDaily() {
+    const key = todayKey();
+    state.dailyKey = key;
+
+    let rec = await idbGet("daily", key);
+    if (!rec) {
+      rec = { id: key, proteinConsumed: 0, creatineTaken: false, updatedAt: nowIso() };
+      await idbPut("daily", rec);
+    }
+    state.daily = rec;
+    renderDailyUI();
+  }
+
+  async function saveDaily() {
+    if (!state.daily) return;
+    state.daily.updatedAt = nowIso();
+    await idbPut("daily", state.daily);
+    renderDailyUI();
+  }
+
+  async function renderProteinHistory() {
+    const box = $("#proteinHistoryList");
+    if (!box) return;
+
+    const target = state.settings.proteinTarget ?? 180;
+
+    const all = await idbGetAll("daily");
+    all.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+
+    const last7 = all.slice(0, 7);
+
+    if (!last7.length) {
+      box.innerHTML = `<div class="mini">No daily entries yet.</div>`;
+      return;
+    }
+
+    box.innerHTML = "";
+
+    for (const d of last7) {
+      const consumed = Number(d.proteinConsumed ?? 0);
+      const left = Math.max(0, target - consumed);
+      const ok = consumed >= target;
+      const creatine = d.creatineTaken ? "✅" : "—";
+
+      const item = document.createElement("div");
+      item.className = "history-item";
+      item.innerHTML = `
+        <h4>${d.id}</h4>
+        <div class="mini">Protein: ${consumed}g / ${target}g ${ok ? "✅" : `(${left}g left)`}</div>
+        <div class="mini">Creatine: ${creatine}</div>
+      `;
+      box.appendChild(item);
+    }
+  }
+
+  function renderDailyUI() {
+    const target = state.settings.proteinTarget ?? 180;
+    const consumed = state.daily?.proteinConsumed ?? 0;
+    const left = Math.max(0, target - consumed);
+
+    const dateEl = $("#dailyDateText");
+    if (dateEl) dateEl.textContent = `Date: ${state.dailyKey}`;
+
+    const tEl = $("#proteinTargetText");
+    const cEl = $("#proteinConsumedText");
+    const lEl = $("#proteinLeftText");
+    if (tEl) tEl.textContent = `${target}g`;
+    if (cEl) cEl.textContent = `${consumed}g`;
+    if (lEl) lEl.textContent = `${left}g`;
+
+    const chk = $("#chkCreatine");
+    if (chk) chk.checked = !!state.daily?.creatineTaken;
+
+    renderProteinHistory();
+  }
+
+  async function addProtein(grams) {
+    const g = Number.parseInt(String(grams), 10);
+    if (!Number.isFinite(g) || g <= 0) return;
+
+    if (!state.daily || state.dailyKey !== todayKey()) {
+      await loadDaily();
+    }
+
+    state.daily.proteinConsumed = Math.max(0, (state.daily.proteinConsumed ?? 0) + g);
+    await saveDaily();
+
+    const s = $("#dailyStatus");
+    if (s) s.textContent = `Added ${g}g ✅`;
+  }
+
+  async function resetProteinToday() {
+    if (!state.daily || state.dailyKey !== todayKey()) {
+      await loadDaily();
+    }
+    state.daily.proteinConsumed = 0;
+    await saveDaily();
+
+    const s = $("#dailyStatus");
+    if (s) s.textContent = "Reset ✅";
+  }
+
+  async function toggleCreatineTaken(isTaken) {
+    if (!state.daily || state.dailyKey !== todayKey()) {
+      await loadDaily();
+    }
+    state.daily.creatineTaken = !!isTaken;
+    await saveDaily();
+
+    const s = $("#dailyStatus");
+    if (s) s.textContent = isTaken ? "Creatine ticked ✅" : "Creatine unticked";
+  }
+
+
   // ---------- Service Worker ----------
   async function registerSW() {
     if (!("serviceWorker" in navigator)) return;
@@ -880,6 +1009,23 @@
       if (!file) return;
       await importBackup(file);
       e.target.value = "";
+    });
+
+    // Daily (protein + creatine)
+    $("#btnAdd10")?.addEventListener("click", () => addProtein(10));
+    $("#btnAdd20")?.addEventListener("click", () => addProtein(20));
+    $("#btnAdd30")?.addEventListener("click", () => addProtein(30));
+
+    $("#btnAddProtein")?.addEventListener("click", () => {
+      const v = $("#proteinAddInput").value.trim();
+      $("#proteinAddInput").value = "";
+      addProtein(v);
+    });
+
+    $("#btnResetProtein")?.addEventListener("click", () => resetProteinToday());
+
+    $("#chkCreatine")?.addEventListener("change", (e) => {
+      toggleCreatineTaken(e.target.checked);
     });
 
     // Exercise modal
