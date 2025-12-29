@@ -94,11 +94,12 @@
     maxWeightKg: 200,
     showBest: true,
     proteinTarget: 180,
+    stepsTarget: 12500,
   };
 
   // ---------- IndexedDB ----------
   const DB_NAME = "workout_log_db";
-  const DB_VER = 2;
+  const DB_VER = 3;
   let db = null;
 
   function idbOpen() {
@@ -823,7 +824,7 @@
 
     let rec = await idbGet("daily", key);
     if (!rec) {
-      rec = { id: key, proteinConsumed: 0, creatineTaken: false, updatedAt: nowIso() };
+      rec = { id: key, proteinConsumed: 0, stepsDone: 0, creatineTaken: false, updatedAt: nowIso() };
       await idbPut("daily", rec);
     }
     state.daily = rec;
@@ -842,6 +843,7 @@
     if (!box) return;
 
     const target = state.settings.proteinTarget ?? 180;
+    const targetSteps = state.settings.stepsTarget ?? 12500;
 
     const all = await idbGetAll("daily");
     all.sort((a, b) => String(b.id).localeCompare(String(a.id)));
@@ -867,6 +869,7 @@
         <h4>${d.id}</h4>
         <div class="mini">Protein: ${consumed}g / ${target}g ${ok ? "✅" : `(${left}g left)`}</div>
         <div class="mini">Creatine: ${creatine}</div>
+        <div class="mini">Steps: ${Number(d.stepsDone ?? 0)} / ${targetSteps} ${Number(d.stepsDone ?? 0) >= targetSteps ? "✅" : ""}</div>
       `;
       box.appendChild(item);
     }
@@ -874,6 +877,7 @@
 
   function renderDailyUI() {
     const target = state.settings.proteinTarget ?? 180;
+    const targetSteps = state.settings.stepsTarget ?? 12500;
     const consumed = state.daily?.proteinConsumed ?? 0;
     const left = Math.max(0, target - consumed);
 
@@ -886,6 +890,17 @@
     if (tEl) tEl.textContent = `${target}g`;
     if (cEl) cEl.textContent = `${consumed}g`;
     if (lEl) lEl.textContent = `${left}g`;
+
+    const stepsTarget = state.settings.stepsTarget ?? 12500;
+    const stepsDone = state.daily?.stepsDone ?? 0;
+    const stepsLeft = Math.max(0, stepsTarget - stepsDone);
+
+    const stEl = $("#stepsTargetText");
+    const sdEl = $("#stepsDoneText");
+    const slEl = $("#stepsLeftText");
+    if (stEl) stEl.textContent = `${stepsTarget}`;
+    if (sdEl) sdEl.textContent = `${stepsDone}`;
+    if (slEl) slEl.textContent = `${stepsLeft}`;
 
     const chk = $("#chkCreatine");
     if (chk) chk.checked = !!state.daily?.creatineTaken;
@@ -941,6 +956,34 @@
     }
   }
 
+  async function addSteps(steps) {
+    const s = Number.parseInt(String(steps), 10);
+    if (!Number.isFinite(s) || s <= 0) return;
+
+    if (!state.daily || state.dailyKey !== todayKey()) {
+      await loadDaily();
+    }
+
+    state.daily.stepsDone = Math.max(0, (state.daily.stepsDone ?? 0) + s);
+    await saveDaily();
+
+    const msg = $("#dailyStatus");
+    if (msg) msg.textContent = `Added ${s} steps ✅`;
+  }
+
+  async function resetStepsToday() {
+    if (!state.daily || state.dailyKey !== todayKey()) {
+      await loadDaily();
+    }
+    state.daily.stepsDone = 0;
+    await saveDaily();
+
+    const msg = $("#dailyStatus");
+    if (msg) msg.textContent = "Steps reset ✅";
+  }
+
+
+
   // ---------- Event Wiring ----------
   function wire() {
     // Home start buttons
@@ -975,6 +1018,20 @@
     });
 
     // Workout controls
+    $("#btnBackToHomeFromWorkout")?.addEventListener("click", async () => {
+      if (!state.currentWorkout) {
+        showView("#viewHome");
+        setSubtitle("Ready.");
+        return;
+      }
+      const ok = confirm("Go back to Home? This will cancel the current workout (nothing will be exported).");
+      if (!ok) return;
+      await deleteWorkout(state.currentWorkout.id);
+      state.currentWorkout = null;
+      showView("#viewHome");
+      setSubtitle("Workout cancelled.");
+    });
+
     $("#btnSaveCardio").addEventListener("click", cardioSave);
     $("#btnFinishWorkout").addEventListener("click", finishWorkout);
     $("#btnPauseWorkout").addEventListener("click", () => {
@@ -1028,6 +1085,18 @@
       toggleCreatineTaken(e.target.checked);
     });
 
+    $("#btnAdd1000")?.addEventListener("click", () => addSteps(1000));
+    $("#btnAdd2000")?.addEventListener("click", () => addSteps(2000));
+    $("#btnAdd5000")?.addEventListener("click", () => addSteps(5000));
+
+    $("#btnAddSteps")?.addEventListener("click", () => {
+      const v = $("#stepsAddInput").value.trim();
+      $("#stepsAddInput").value = "";
+      addSteps(v);
+    });
+
+    $("#btnResetSteps")?.addEventListener("click", () => resetStepsToday());
+
     // Exercise modal
     $("#btnCloseModal").addEventListener("click", () => hideModal("#exerciseModal"));
     $("#setCount").addEventListener("change", () => buildSetsUI(Number($("#setCount").value)));
@@ -1061,6 +1130,6 @@
     await registerSW();
     setSubtitle("Ready. (Add to Home Screen in Safari)");
   }
-const CACHE_NAME = "workout-log-v2"; // bump version each update
+
   init();
 })();

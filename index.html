@@ -43,6 +43,34 @@
           </div>
         </div>
 
+        <div class="row space-between" style="margin-top:12px;">
+          <div>
+            <div class="kicker">Steps target</div>
+            <div style="font-size:22px; font-weight:900;" id="stepsTargetText">12500</div>
+          </div>
+          <div>
+            <div class="kicker">Steps</div>
+            <div style="font-size:22px; font-weight:900;" id="stepsDoneText">0</div>
+          </div>
+          <div>
+            <div class="kicker">Left</div>
+            <div style="font-size:22px; font-weight:900;" id="stepsLeftText">12500</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="secondary" id="btnAdd1000">+1000</button>
+          <button class="secondary" id="btnAdd2000">+2000</button>
+          <button class="secondary" id="btnAdd5000">+5000</button>
+        </div>
+
+        <div class="row" style="width:100%;">
+          <input id="stepsAddInput" inputmode="numeric" pattern="[0-9]*" placeholder="Add steps (e.g., 2500)" style="flex:1;" />
+          <button class="primary" id="btnAddSteps">Add</button>
+          <button class="danger" id="btnResetSteps">Reset</button>
+        </div>
+
+
         <div class="row">
           <button class="secondary" id="btnAdd10">+10g</button>
           <button class="secondary" id="btnAdd20">+20g</button>
@@ -100,6 +128,7 @@
             <div class="meta" id="workoutMeta">—</div>
           </div>
           <div class="workout-actions">
+            <button class="secondary" id="btnBackToHomeFromWorkout">Back</button>
             <button class="secondary" id="btnPauseWorkout">Pause</button>
             <button class="danger" id="btnFinishWorkout">Finish</button>
           </div>
@@ -274,5 +303,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-<!-- redeploy -->
