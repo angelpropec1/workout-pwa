@@ -126,6 +126,18 @@
             <div class="kicker" id="workoutKicker">Workout</div>
             <h2 id="workoutTitle">—</h2>
             <div class="meta" id="workoutMeta">—</div>
+            <div class="form" style="margin-top:10px;">
+              <label>
+                Total time in gym (minutes)
+                <input id="gymMins" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 75" />
+              </label>
+              <label>
+                Calories burned (from iWatch)
+                <input id="gymCals" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 520" />
+              </label>
+              <button class="secondary" id="btnSaveGymStats">Save</button>
+              <div class="mini" id="gymStatsSavedText"></div>
+            </div>
           </div>
           <div class="workout-actions">
             <button class="secondary" id="btnBackToHomeFromWorkout">Back</button>
@@ -301,5 +313,28 @@
   </div>
 
   <script src="app.js"></script>
+
+  <!-- Export Sheet -->
+  <div id="exportSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="sheet-inner">
+      <div class="sheet-header">
+        <div>
+          <div id="exportTitle" class="sheet-title">Export to ChatGPT</div>
+          <div class="mini" id="exportHint">Tap Copy, then paste into ChatGPT.</div>
+        </div>
+        <button class="secondary" id="btnCloseExport">Close</button>
+      </div>
+
+      <textarea id="exportText" class="export-text" readonly></textarea>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="primary" id="btnCopyExport">Copy to Clipboard</button>
+        <button class="secondary" id="btnOpenChatGPT">Open ChatGPT</button>
+      </div>
+
+      <div class="mini" id="exportStatus"></div>
+    </div>
+  </div>
+
 </body>
 </html>

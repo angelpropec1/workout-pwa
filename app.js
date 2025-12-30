@@ -39,6 +39,7 @@
     { id:"situps", name:"Sit-ups", group:"Core", type:"bodyweight" },
     { id:"leg_raises", name:"Leg raises", group:"Core", type:"bodyweight" },
     { id:"cycle_crunch", name:"Cycle crunch", group:"Core", type:"bodyweight" },
+    { id:"plank", name:"Plank", group:"Core", type:"bodyweight_time" },
     // Shoulders
     { id:"seated_shoulder_press", name:"Seated shoulder press", group:"Shoulders", type:"strength" },
     { id:"db_reverse_fly", name:"Dumbbell reverse fly", group:"Shoulders", type:"strength" },
@@ -63,7 +64,7 @@
       exercises:[
         "seated_chest_press","bench_press","incline_bench_press","decline_bench_press","seated_butterfly","pushups",
         "seated_barbell","barbell_21s","tricep_pulldown","dips",
-        "situps","leg_raises","cycle_crunch"
+        "situps","leg_raises","cycle_crunch","plank"
       ],
     },
     w2: {
@@ -72,7 +73,7 @@
       exercises:[
         "seated_shoulder_press","db_reverse_fly","db_front_raises","weight_steering",
         "lat_pulldown","seated_pulldown","seated_pull_row","back_extensions",
-        "situps","leg_raises","cycle_crunch"
+        "situps","leg_raises","cycle_crunch","plank"
       ],
     },
     w3: {
@@ -80,7 +81,7 @@
       name:"Legs & Core",
       exercises:[
         "seated_squats","calf_extensions","leg_extensions","leg_curl",
-        "situps","leg_raises","cycle_crunch"
+        "situps","leg_raises","cycle_crunch","plank"
       ],
     },
   };
@@ -99,7 +100,7 @@
 
   // ---------- IndexedDB ----------
   const DB_NAME = "workout_log_db";
-  const DB_VER = 3;
+  const DB_VER = 4;
   let db = null;
 
   function idbOpen() {
@@ -222,8 +223,14 @@
     return opts.join("");
   }
 
-  function buildRepsOptions() {
+  function buildRepsOptions(exerciseId) {
     const opts = [];
+    if (exerciseId === "plank") {
+      for (let s = 0; s <= 600; s += 10) {
+        opts.push(`<option value="${s}">${s}</option>`);
+      }
+      return opts.join("");
+    }
     for (let r = 0; r <= 50; r++) {
       opts.push(`<option value="${r}">${r}</option>`);
     }
@@ -303,6 +310,8 @@
       finishedAt: null,
       cardio: null, // {type, mins, notes}
       notes: "",
+      gymMins: null,
+      calories: null,
     };
     await idbPut("workouts", state.currentWorkout);
     $("#workoutTitle").textContent = t.name;
@@ -312,6 +321,13 @@
     $("#cardioMins").value = "";
     $("#cardioNotes").value = "";
     $("#cardioSavedText").textContent = "";
+
+    const gm = $("#gymMins");
+    const gc = $("#gymCals");
+    const gtxt = $("#gymStatsSavedText");
+    if (gm) gm.value = "";
+    if (gc) gc.value = "";
+    if (gtxt) gtxt.textContent = "";
 
     setSubtitle("Workout started.");
     await renderExerciseList();
@@ -377,22 +393,44 @@
     });
   }
 
-  function makeSetRow(setIndex, weightOptionsHtml, repsOptionsHtml, defaultWeight, defaultReps) {
-    const wSel = `
-      <select class="weightSel" data-set="${setIndex}">
-        ${weightOptionsHtml.replace(`value="${defaultWeight}"`, `value="${defaultWeight}" selected`)}
-      </select>
-    `;
-    const rSel = `
-      <select class="repsSel" data-set="${setIndex}">
-        ${repsOptionsHtml.replace(`value="${defaultReps}"`, `value="${defaultReps}" selected`)}
-      </select>
-    `;
+  function makeSetRow(setIndex, weightOptionsHtml, repsOptionsHtml, defaultWeight, defaultReps, exType, exerciseId, prevHint) {
+    const isBody = (exType === "bodyweight" || exType === "bodyweight_time");
+    const weightCol = isBody ? `
+        <div>
+          <div class="mini">bodyweight</div>
+        </div>
+      ` : `
+        <div>
+          <select class="weightSel" data-set="${setIndex}">
+            ${weightOptionsHtml.replace(`value="${defaultWeight}"`, `value="${defaultWeight}" selected`)}
+          </select>
+          <div class="mini">kg</div>
+        </div>
+      `;
+
+    const label = (exerciseId === "plank") ? "sec" : "reps";
+    const repsCol = `
+        <div>
+          <select class="repsSel" data-set="${setIndex}">
+            ${repsOptionsHtml.replace(`value="${defaultReps}"`, `value="${defaultReps}" selected`)}
+          </select>
+          <div class="mini">${label}</div>
+        </div>
+      `;
+
+    const hint = prevHint ? (() => {
+      const w = Number(prevHint.weightKg ?? 0);
+      const r = Number(prevHint.reps ?? 0);
+      if (exerciseId === "plank") return `Prev: ${r} sec`;
+      if (isBody) return `Prev: ${r} reps`;
+      return `Prev: ${w}kg×${r}`;
+    })() : "";
+
     return `
-      <div class="set-row">
+      <div class="set-row" style="grid-template-columns:${isBody ? "72px 1fr" : "72px 1fr 1fr"}">
         <div class="set-label">Set ${setIndex + 1}</div>
-        <div>${wSel}<div class="mini">kg</div></div>
-        <div>${rSel}<div class="mini">reps</div></div>
+        ${isBody ? repsCol : weightCol + repsCol}
+              ${hint ? `<div class="mini" style="grid-column:1/-1; margin-top:6px;">${hint}</div>` : ""}
       </div>
     `;
   }
@@ -411,8 +449,45 @@
       sets,
       setEntries: Array.from({ length: sets }, () => ({ weightKg: 0, reps: DEFAULTS.reps })),
       notes: "",
+      gymMins: null,
+      calories: null,
     };
     state.currentExerciseDraft = draft;
+
+    // If you've already logged this exercise in this workout, load it so it doesn't reset
+    const existingKey = `${draft.workoutId}|${draft.exerciseId}`;
+    const existing = await idbGet("exerciseLogs", existingKey);
+    const existingEntries = existing?.sets ? existing.sets.map(s => ({ weightKg: s.weightKg, reps: s.reps })) : null;
+    const existingNotes = existing?.notes ?? "";
+    const existingSetCount = existing?.sets?.length ?? null;
+    if (existingEntries && existingSetCount) {
+      state.currentExerciseDraft.sets = existingSetCount;
+      state.currentExerciseDraft.setEntries = existingEntries.map(e => ({ weightKg: Number(e.weightKg ?? 0), reps: Number(e.reps ?? DEFAULTS.reps) }));
+      state.currentExerciseDraft.notes = existingNotes;
+    }
+
+    // Use previous session's per-set weights/reps as recommended defaults (so each set has a target)
+    let prevHints = null;
+    if (!(existingEntries && existingSetCount)) {
+      const prev = await previousLog(draft.exerciseId, state.currentWorkout.startedAt);
+      if (prev?.sets?.length) {
+        const clampCount = Math.max(3, Math.min(5, prev.sets.length));
+        const prevSets = prev.sets.slice(0, clampCount).map(s => ({ weightKg: Number(s.weightKg ?? 0), reps: Number(s.reps ?? DEFAULTS.reps) }));
+        prevHints = prevSets;
+        // Prefill the draft with those targets (strength moves). For bodyweight, weight stays 0 anyway.
+        state.currentExerciseDraft.sets = clampCount;
+        state.currentExerciseDraft.setEntries = prevSets.map(s => ({ weightKg: s.weightKg, reps: s.reps }));
+        state.currentExerciseDraft.prevHints = prevHints;
+      }
+    } else {
+      // still show previous targets as hints even if we already logged this exercise today
+      const prev = await previousLog(draft.exerciseId, state.currentWorkout.startedAt);
+      if (prev?.sets?.length) {
+        const clampCount = Math.max(3, Math.min(5, prev.sets.length));
+        prevHints = prev.sets.slice(0, clampCount).map(s => ({ weightKg: Number(s.weightKg ?? 0), reps: Number(s.reps ?? DEFAULTS.reps) }));
+        state.currentExerciseDraft.prevHints = prevHints;
+      }
+    }
 
     // stats / action
     const stats = await computeStats(exerciseId);
@@ -420,8 +495,8 @@
 
     $("#modalTitle").textContent = ex.name;
     $("#modalKicker").textContent = `${ex.group}`;
-    $("#exerciseNotes").value = "";
-    $("#setCount").value = String(DEFAULTS.sets);
+    $("#exerciseNotes").value = state.currentExerciseDraft.notes || "";
+    $("#setCount").value = String(state.currentExerciseDraft.sets || DEFAULTS.sets);
 
     const lastTxt = stats.last ? `Last: ${stats.last.top.weightKg}kg × ${stats.last.top.reps}` : "Last: —";
     const bestTxt = state.settings.showBest
@@ -433,22 +508,36 @@
 
     $("#modalStatus").textContent = "";
 
-    buildSetsUI(DEFAULTS.sets);
+    buildSetsUI(state.currentExerciseDraft.sets || DEFAULTS.sets, state.currentExerciseDraft.setEntries, state.currentExerciseDraft.prevHints);
     showModal("#exerciseModal");
   }
 
-  function buildSetsUI(setCount) {
+  function buildSetsUI(setCount, existingEntries, prevHints) {
+    const ex = findExercise(state.currentExerciseId);
+    const exType = ex?.type ?? "strength";
     const maxW = state.settings.maxWeightKg;
     const weightOpts = buildWeightOptions(maxW);
-    const repsOpts = buildRepsOptions();
+    const repsOpts = buildRepsOptions(state.currentExerciseId);
     const container = $("#setsContainer");
     container.innerHTML = "";
+
+    const entries = existingEntries && Array.isArray(existingEntries) ? existingEntries.slice(0) : [];
+    // Normalize entries to {weightKg, reps}
+    const norm = entries.map(e => ({ weightKg: Number(e.weightKg ?? 0), reps: Number(e.reps ?? DEFAULTS.reps) }));
+
     for (let i = 0; i < setCount; i++) {
-      container.insertAdjacentHTML("beforeend", makeSetRow(i, weightOpts, repsOpts, 0, DEFAULTS.reps));
+      const init = norm[i] ?? { weightKg: 0, reps: DEFAULTS.reps };
+      const ph = (prevHints && Array.isArray(prevHints)) ? prevHints[i] : null;
+      container.insertAdjacentHTML("beforeend", makeSetRow(i, weightOpts, repsOpts, init.weightKg, init.reps, exType, state.currentExerciseId, ph));
     }
-    // keep draft in sync
+
+    // update draft but preserve existing values
     state.currentExerciseDraft.sets = setCount;
-    state.currentExerciseDraft.setEntries = Array.from({ length: setCount }, () => ({ weightKg: 0, reps: DEFAULTS.reps }));
+    state.currentExerciseDraft.setEntries = Array.from({ length: setCount }, (_, i) => {
+      const init = norm[i] ?? { weightKg: 0, reps: DEFAULTS.reps };
+      return { weightKg: init.weightKg, reps: init.reps };
+    });
+
     // attach listeners
     $$(".weightSel").forEach(sel => {
       sel.addEventListener("change", () => {
@@ -462,6 +551,7 @@
         state.currentExerciseDraft.setEntries[idx].reps = Number(sel.value);
       });
     });
+
   }
 
   async function saveExerciseLog() {
@@ -473,6 +563,10 @@
       const idx = Number(sel.getAttribute("data-set"));
       d.setEntries[idx].weightKg = Number(sel.value);
     });
+    // If no weight selectors (bodyweight), keep weight at 0
+    if ($$(".weightSel").length === 0) {
+      d.setEntries = d.setEntries.map(s => ({ weightKg: 0, reps: s.reps }));
+    }
     $$(".repsSel").forEach(sel => {
       const idx = Number(sel.getAttribute("data-set"));
       d.setEntries[idx].reps = Number(sel.value);
@@ -563,7 +657,74 @@
     setTimeout(() => hideModal("#actionModal"), 250);
   }
 
-  // ---------- Finish Workout ----------
+  
+  async function saveGymStats() {
+    if (!state.currentWorkout) return;
+    const mins = $("#gymMins") ? $("#gymMins").value.trim() : "";
+    const cals = $("#gymCals") ? $("#gymCals").value.trim() : "";
+    const m = mins ? Number.parseInt(mins, 10) : null;
+    const c = cals ? Number.parseInt(cals, 10) : null;
+    state.currentWorkout.gymMins = Number.isFinite(m) ? m : null;
+    state.currentWorkout.calories = Number.isFinite(c) ? c : null;
+    await idbPut("workouts", state.currentWorkout);
+    const t = $("#gymStatsSavedText");
+    if (t) t.textContent = `Saved: ${state.currentWorkout.gymMins ?? "—"} min, ${state.currentWorkout.calories ?? "—"} cals`;
+    setSubtitle("Gym stats saved.");
+  }
+
+
+  // ---------- Export Sheet (iOS-friendly copy) ----------
+  function openExportSheet(text) {
+    const sheet = $("#exportSheet");
+    const ta = $("#exportText");
+    const status = $("#exportStatus");
+    if (!sheet || !ta) return;
+
+    ta.value = text || "";
+    if (status) status.textContent = "";
+    sheet.classList.remove("hidden");
+
+    // Scroll to top and focus for easier manual selection if needed
+    ta.scrollTop = 0;
+    ta.focus();
+    ta.setSelectionRange(0, 0);
+  }
+
+  function closeExportSheet() {
+    const sheet = $("#exportSheet");
+    if (!sheet) return;
+    sheet.classList.add("hidden");
+  }
+
+  async function copyExportToClipboard() {
+    const ta = $("#exportText");
+    const status = $("#exportStatus");
+    const text = ta ? ta.value : "";
+    if (!text) return;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback: select all and execCommand
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        ta.setSelectionRange(0, 0);
+      }
+      if (status) status.textContent = "Copied ✅ Now paste into ChatGPT.";
+    } catch (e) {
+      if (status) status.textContent = "Could not auto-copy. Tap and hold in the box → Select All → Copy.";
+    }
+  }
+
+  function openChatGPT() {
+    // Try app link first, fall back to website
+    const url = "https://chat.openai.com/";
+    window.open(url, "_blank");
+  }
+
+// ---------- Finish Workout ----------
   async function finishWorkout() {
     if (!state.currentWorkout) return;
 
@@ -611,6 +772,8 @@
     out.push(`Started: ${fmtDate(workout.startedAt)}`);
     out.push(`Finished: ${workout.finishedAt ? fmtDate(workout.finishedAt) : "—"}`);
     out.push(`Duration: ${durMin} min`);
+    if (workout.gymMins != null) out.push(`Gym time: ${workout.gymMins} min`);
+    if (workout.calories != null) out.push(`Calories (iWatch): ${workout.calories}`);
     out.push("");
 
     if (workout.cardio?.type) {
@@ -664,8 +827,10 @@
     } catch {
       // fallback
       $("#exportStatus").textContent = "Copy failed. Your browser may block clipboard. Use the manual copy prompt.";
-      window.prompt("Copy this report:", exportText);
-    }
+      window.openExportSheet(text);
+    // auto-copy for convenience
+    copyExportToClipboard();
+}
   }
 
   function openChatGPT() {
@@ -713,8 +878,10 @@
           await navigator.clipboard.writeText(text);
           setSubtitle("History export copied ✅");
         } catch {
-          window.prompt("Copy this report:", text);
-        }
+          window.openExportSheet(text);
+    // auto-copy for convenience
+    copyExportToClipboard();
+}
       });
     });
 
@@ -994,7 +1161,7 @@
     $("#btnCardioOnly").addEventListener("click", async () => {
       // Cardio-only workout uses w3 template id but empty exercises; kept simple
       const id = `w_${Date.now()}`;
-      state.currentWorkout = { id, templateId:"cardio", templateName:"Cardio Only", startedAt:nowIso(), finishedAt:null, cardio:null, notes:"" };
+      state.currentWorkout = { id, templateId:"cardio", templateName:"Cardio Only", startedAt:nowIso(), finishedAt:null, cardio:null, notes:"", gymMins:null, calories:null };
       await idbPut("workouts", state.currentWorkout);
       $("#workoutTitle").textContent = "Cardio Only";
       $("#workoutMeta").textContent = `Started: ${fmtDate(state.currentWorkout.startedAt)}`;
@@ -1018,6 +1185,7 @@
     });
 
     // Workout controls
+    $("#btnSaveGymStats")?.addEventListener("click", saveGymStats);
     $("#btnBackToHomeFromWorkout")?.addEventListener("click", async () => {
       if (!state.currentWorkout) {
         showView("#viewHome");
@@ -1036,6 +1204,14 @@
     $("#btnFinishWorkout").addEventListener("click", finishWorkout);
     $("#btnPauseWorkout").addEventListener("click", () => {
       alert("Paused. (Tip: it auto-saves your workout start + each exercise log.)");
+    });
+
+    // Export sheet
+    $("#btnCloseExport")?.addEventListener("click", closeExportSheet);
+    $("#btnCopyExport")?.addEventListener("click", copyExportToClipboard);
+    $("#btnOpenChatGPT")?.addEventListener("click", openChatGPT);
+    $("#exportSheet")?.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "exportSheet") closeExportSheet();
     });
 
     // History
@@ -1099,7 +1275,7 @@
 
     // Exercise modal
     $("#btnCloseModal").addEventListener("click", () => hideModal("#exerciseModal"));
-    $("#setCount").addEventListener("change", () => buildSetsUI(Number($("#setCount").value)));
+    $("#setCount").addEventListener("change", () => buildSetsUI(Number($("#setCount").value), state.currentExerciseDraft.setEntries, state.currentExerciseDraft.prevHints));
     $("#btnSaveExercise").addEventListener("click", saveExerciseLog);
     $("#btnActionNext").addEventListener("click", openActionModal);
 
