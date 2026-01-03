@@ -96,6 +96,7 @@
     showBest: true,
     proteinTarget: 180,
     stepsTarget: 12500,
+    sleepTarget: 80,
   };
 
   // ---------- IndexedDB ----------
@@ -195,6 +196,7 @@ const DB_NAME = "workout_log_db";
 
   // ---------- State ----------
   const state = {
+    lastSyncAt: null,
     settings: { ...DEFAULTS },
     currentWorkout: null, // {id, templateId, templateName, startedAt, finishedAt, cardio, notes}
     currentExerciseId: null,
@@ -731,7 +733,19 @@ const DB_NAME = "workout_log_db";
     }
   }
 
-  function setCloudStatus(text) {
+  
+  function updateCloudButtons() {
+    const online = navigator.onLine !== false;
+    const syncBtn = $("#btnSyncNow");
+    const resetBtn = $("#btnCloudResetLocal");
+    if (syncBtn) syncBtn.disabled = !online;
+    if (resetBtn) resetBtn.disabled = !online;
+    if (!online) {
+      setCloudStatus("Cloud: offline (connect to internet).");
+    }
+  }
+
+function setCloudStatus(text) {
     const el = $("#cloudStatus");
     if (el) el.textContent = text || "";
     const info = $("#cloudSyncInfo");
@@ -741,6 +755,7 @@ const DB_NAME = "workout_log_db";
   async function syncNow(direction) {
     // direction: "pull" to force reset local from cloud, else bidirectional (newest wins)
     try {
+      updateCloudButtons();
       setCloudStatus("Cloud: syncing…");
       const cloud = await cloudGetSnapshot();
       const local = await makeLocalSnapshot();
@@ -753,9 +768,10 @@ const DB_NAME = "workout_log_db";
           await applySnapshotToLocal(cloud);
           state.settings = await loadSettings();
           await loadDaily();
-          setCloudStatus(`Cloud: pulled ✅ (${cloud.updatedAt})`);
+          state.lastSyncAt = nowIso();
+          setCloudStatus(`Cloud: pulled ✅ (cloud ${cloud.updatedAt})`);
         } else {
-          setCloudStatus("Cloud: nothing found to pull.");
+          setCloudStatus("Cloud: nothing to pull yet.");
         }
         return;
       }
@@ -765,13 +781,15 @@ const DB_NAME = "workout_log_db";
         await applySnapshotToLocal(cloud);
         state.settings = await loadSettings();
         await loadDaily();
-        setCloudStatus(`Cloud: pulled ✅ (${cloud.updatedAt})`);
+        state.lastSyncAt = nowIso();
+          setCloudStatus(`Cloud: pulled ✅ (cloud ${cloud.updatedAt})`);
       } else {
         const ok = await cloudPutSnapshot(local);
-        setCloudStatus(ok ? `Cloud: pushed ✅ (${local.updatedAt})` : "Cloud: push failed.");
+        if (ok) state.lastSyncAt = nowIso();
+        setCloudStatus(ok ? `Cloud: pushed ✅ (local ${local.updatedAt})` : "Cloud: push failed.");
       }
     } catch (e) {
-      setCloudStatus("Cloud: sync failed (check internet).");
+      setCloudStatus("Cloud: sync failed (check internet / try again).");
     }
   }
 
@@ -1104,7 +1122,7 @@ const DB_NAME = "workout_log_db";
 
     let rec = await idbGet("daily", key);
     if (!rec) {
-      rec = { id: key, proteinConsumed: 0, stepsDone: 0, creatineTaken: false, updatedAt: nowIso() };
+      rec = { id: key, proteinConsumed: 0, stepsDone: 0, sleepScore: null, creatineTaken: false, updatedAt: nowIso() };
       await idbPut("daily", rec);
     }
     state.daily = rec;
@@ -1151,6 +1169,7 @@ const DB_NAME = "workout_log_db";
         <div class="mini">Protein: ${consumed}g / ${target}g ${ok ? "✅" : `(${left}g left)`}</div>
         <div class="mini">Creatine: ${creatine}</div>
         <div class="mini">Steps: ${Number(d.stepsDone ?? 0)} / ${targetSteps} ${Number(d.stepsDone ?? 0) >= targetSteps ? "✅" : ""}</div>
+        <div class="mini">Sleep: ${d.sleepScore == null ? "—" : d.sleepScore} / ${state.settings.sleepTarget ?? 80} ${d.sleepScore != null && d.sleepScore >= (state.settings.sleepTarget ?? 80) ? "✅" : ""}</div>
       `;
       box.appendChild(item);
     }
@@ -1182,6 +1201,18 @@ const DB_NAME = "workout_log_db";
     if (stEl) stEl.textContent = `${stepsTarget}`;
     if (sdEl) sdEl.textContent = `${stepsDone}`;
     if (slEl) slEl.textContent = `${stepsLeft}`;
+
+    const sleepTarget = state.settings.sleepTarget ?? 80;
+    const sleepScore = (state.daily?.sleepScore ?? null);
+    const ssEl = $("#sleepScoreText");
+    const stEl2 = $("#sleepTargetText");
+    const sstEl = $("#sleepStatusText");
+    if (stEl2) stEl2.textContent = `${sleepTarget}`;
+    if (ssEl) ssEl.textContent = (sleepScore == null ? "—" : `${sleepScore}`);
+    if (sstEl) {
+      if (sleepScore == null) sstEl.textContent = "—";
+      else sstEl.textContent = sleepScore >= sleepTarget ? "✅" : "⬆️";
+    }
 
     const chk = $("#chkCreatine");
     if (chk) chk.checked = !!state.daily?.creatineTaken;
@@ -1391,6 +1422,13 @@ const DB_NAME = "workout_log_db";
 
     $("#btnResetSteps")?.addEventListener("click", () => resetStepsToday());
 
+    $("#btnSetSleep")?.addEventListener("click", () => {
+      const v = $("#sleepInput").value.trim();
+      $("#sleepInput").value = "";
+      setSleepScore(v);
+    });
+    $("#btnResetSleep")?.addEventListener("click", () => resetSleepScoreToday());
+
     // Exercise modal
     $("#btnCloseModal").addEventListener("click", () => hideModal("#exerciseModal"));
     $("#setCount").addEventListener("change", () => buildSetsUI(Number($("#setCount").value), state.currentExerciseDraft.setEntries, state.currentExerciseDraft.prevHints));
@@ -1414,6 +1452,38 @@ const DB_NAME = "workout_log_db";
     $("#btnExportChatGPT").addEventListener("click", exportToChatGPT);
     $("#btnOpenChatGPT").addEventListener("click", openChatGPT);
   }
+
+  async function setSleepScore(score) {
+    const s = Number.parseInt(String(score), 10);
+    if (!Number.isFinite(s) || s < 0 || s > 100) {
+      const msg = $("#dailyStatus");
+      if (msg) msg.textContent = "Sleep score must be 0–100.";
+      return;
+    }
+
+    if (!state.daily || state.dailyKey !== todayKey()) {
+      await loadDaily();
+    }
+
+    state.daily.sleepScore = s;
+    await saveDaily();
+
+    const msg = $("#dailyStatus");
+    if (msg) msg.textContent = `Sleep score set to ${s} ✅`;
+  }
+
+  async function resetSleepScoreToday() {
+    if (!state.daily || state.dailyKey !== todayKey()) {
+      await loadDaily();
+    }
+    state.daily.sleepScore = null;
+    await saveDaily();
+
+    const msg = $("#dailyStatus");
+    if (msg) msg.textContent = "Sleep score reset ✅";
+  }
+
+
 
   // ---------- Init ----------
   async function init() {

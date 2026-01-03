@@ -273,3 +273,5 @@ label.inline input{ width:18px; height:18px; }
   border-radius: 12px;
   color: var(--text);
 }
+
+.workout-btn{width:100%; padding:14px 12px; border-radius:14px; font-weight:900;}
