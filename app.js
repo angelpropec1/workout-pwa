@@ -681,7 +681,34 @@ const DB_NAME = "workout_log_db";
 
 
   
-  // ---------- Cloud Sync (Firebase RTDB REST) ----------
+  
+  function fmtAgo(iso) {
+    if (!iso) return "";
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return "";
+    const diff = Math.max(0, Date.now() - t);
+    const s = Math.floor(diff / 1000);
+    if (s < 10) return "just now";
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 48) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    return `${d}d ago`;
+  }
+
+  function updateLastSyncLine() {
+    const el = $("#lastSyncLine");
+    if (!el) return;
+    if (!state.lastSyncAt) {
+      el.textContent = "Last sync: —";
+      return;
+    }
+    el.textContent = `Last sync: ${fmtAgo(state.lastSyncAt)} (${new Date(state.lastSyncAt).toLocaleString()})`;
+  }
+
+// ---------- Cloud Sync (Firebase RTDB REST) ----------
   function cloudPath(path) {
     const p = path.startsWith("/") ? path.slice(1) : path;
     return `${CLOUD_URL}/${p}.json`;
@@ -750,6 +777,8 @@ function setCloudStatus(text) {
     if (el) el.textContent = text || "";
     const info = $("#cloudSyncInfo");
     if (info) info.textContent = text || "";
+  
+    updateLastSyncLine();
   }
 
   async function syncNow(direction) {
