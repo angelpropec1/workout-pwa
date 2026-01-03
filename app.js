@@ -99,7 +99,9 @@
   };
 
   // ---------- IndexedDB ----------
-  const DB_NAME = "workout_log_db";
+    const CLOUD_URL = "https://workoutlog-ricky-default-rtdb.europe-west1.firebasedatabase.app";
+  const CLOUD_KEY = "ricky";
+const DB_NAME = "workout_log_db";
   const DB_VER = 4;
   let db = null;
 
@@ -314,6 +316,7 @@
       calories: null,
     };
     await idbPut("workouts", state.currentWorkout);
+    cloudPushBestEffort();
     $("#workoutTitle").textContent = t.name;
     $("#workoutMeta").textContent = `Started: ${fmtDate(state.currentWorkout.startedAt)}`;
     $("#workoutKicker").textContent = "Workout in progress";
@@ -347,6 +350,7 @@
       $("#cardioSavedText").textContent = `Saved: ${type}, ${mins} min${notes ? " — " + notes : ""}`;
     }
     await idbPut("workouts", state.currentWorkout);
+    cloudPushBestEffort();
     setSubtitle("Cardio saved.");
   }
 
@@ -667,13 +671,121 @@
     state.currentWorkout.gymMins = Number.isFinite(m) ? m : null;
     state.currentWorkout.calories = Number.isFinite(c) ? c : null;
     await idbPut("workouts", state.currentWorkout);
+    cloudPushBestEffort();
     const t = $("#gymStatsSavedText");
     if (t) t.textContent = `Saved: ${state.currentWorkout.gymMins ?? "—"} min, ${state.currentWorkout.calories ?? "—"} cals`;
     setSubtitle("Gym stats saved.");
   }
 
 
-  // ---------- Export Sheet (iOS-friendly copy) ----------
+  
+  // ---------- Cloud Sync (Firebase RTDB REST) ----------
+  function cloudPath(path) {
+    const p = path.startsWith("/") ? path.slice(1) : path;
+    return `${CLOUD_URL}/${p}.json`;
+  }
+
+  async function cloudGetSnapshot() {
+    const url = cloudPath(`workoutlog/${CLOUD_KEY}/snapshot`);
+    const res = await fetch(url, { method:"GET", cache:"no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data || null;
+  }
+
+  async function cloudPutSnapshot(snapshot) {
+    const url = cloudPath(`workoutlog/${CLOUD_KEY}/snapshot`);
+    const res = await fetch(url, {
+      method:"PUT",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(snapshot),
+    });
+    return res.ok;
+  }
+
+  async function makeLocalSnapshot() {
+    const workouts = await idbGetAll("workouts");
+    const exerciseLogs = await idbGetAll("exerciseLogs");
+    const daily = await idbGetAll("daily");
+    const settings = state.settings || await loadSettings();
+    return {
+      updatedAt: nowIso(),
+      workouts,
+      exerciseLogs,
+      daily,
+      settings,
+    };
+  }
+
+  async function applySnapshotToLocal(snapshot) {
+    if (!snapshot) return;
+    await idbClear("workouts");
+    await idbClear("exerciseLogs");
+    await idbClear("daily");
+    // settings store is key/value; we just write one record "app"
+    await idbPutMany("workouts", snapshot.workouts || []);
+    await idbPutMany("exerciseLogs", snapshot.exerciseLogs || []);
+    await idbPutMany("daily", snapshot.daily || []);
+    if (snapshot.settings) {
+      await idbPut("settings", { id:"app", ...snapshot.settings });
+    }
+  }
+
+  function setCloudStatus(text) {
+    const el = $("#cloudStatus");
+    if (el) el.textContent = text || "";
+    const info = $("#cloudSyncInfo");
+    if (info) info.textContent = text || "";
+  }
+
+  async function syncNow(direction) {
+    // direction: "pull" to force reset local from cloud, else bidirectional (newest wins)
+    try {
+      setCloudStatus("Cloud: syncing…");
+      const cloud = await cloudGetSnapshot();
+      const local = await makeLocalSnapshot();
+
+      const cloudAt = cloud?.updatedAt ? Date.parse(cloud.updatedAt) : 0;
+      const localAt = local?.updatedAt ? Date.parse(local.updatedAt) : 0;
+
+      if (direction === "pull") {
+        if (cloud) {
+          await applySnapshotToLocal(cloud);
+          state.settings = await loadSettings();
+          await loadDaily();
+          setCloudStatus(`Cloud: pulled ✅ (${cloud.updatedAt})`);
+        } else {
+          setCloudStatus("Cloud: nothing found to pull.");
+        }
+        return;
+      }
+
+      // Newest wins
+      if (cloud && cloudAt > localAt) {
+        await applySnapshotToLocal(cloud);
+        state.settings = await loadSettings();
+        await loadDaily();
+        setCloudStatus(`Cloud: pulled ✅ (${cloud.updatedAt})`);
+      } else {
+        const ok = await cloudPutSnapshot(local);
+        setCloudStatus(ok ? `Cloud: pushed ✅ (${local.updatedAt})` : "Cloud: push failed.");
+      }
+    } catch (e) {
+      setCloudStatus("Cloud: sync failed (check internet).");
+    }
+  }
+
+  // Push after local writes (best-effort)
+  async function cloudPushBestEffort() {
+    try {
+      const snap = await makeLocalSnapshot();
+      await cloudPutSnapshot(snap);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+// ---------- Export Sheet (iOS-friendly copy) ----------
   function openExportSheet(text) {
     const sheet = $("#exportSheet");
     const ta = $("#exportText");
@@ -730,6 +842,7 @@
 
     state.currentWorkout.finishedAt = nowIso();
     await idbPut("workouts", state.currentWorkout);
+    cloudPushBestEffort();
 
     // build summary + export text
     const exportText = await buildExportText(state.currentWorkout.id);
@@ -1002,6 +1115,7 @@
     if (!state.daily) return;
     state.daily.updatedAt = nowIso();
     await idbPut("daily", state.daily);
+    cloudPushBestEffort();
     renderDailyUI();
   }
 
@@ -1163,6 +1277,7 @@
       const id = `w_${Date.now()}`;
       state.currentWorkout = { id, templateId:"cardio", templateName:"Cardio Only", startedAt:nowIso(), finishedAt:null, cardio:null, notes:"", gymMins:null, calories:null };
       await idbPut("workouts", state.currentWorkout);
+    cloudPushBestEffort();
       $("#workoutTitle").textContent = "Cardio Only";
       $("#workoutMeta").textContent = `Started: ${fmtDate(state.currentWorkout.startedAt)}`;
       $("#workoutKicker").textContent = "Workout in progress";
@@ -1207,6 +1322,9 @@
     });
 
     // Export sheet
+    $("#btnSyncNow")?.addEventListener("click", () => syncNow());
+    $("#btnCloudResetLocal")?.addEventListener("click", () => syncNow("pull"));
+
     $("#btnCloseExport")?.addEventListener("click", closeExportSheet);
     $("#btnCopyExport")?.addEventListener("click", copyExportToClipboard);
     $("#btnOpenChatGPT")?.addEventListener("click", openChatGPT);
@@ -1309,3 +1427,25 @@
 
   init();
 })();
+  async function idbClear(storeName) {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = d.transaction(storeName, "readwrite");
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+      tx.objectStore(storeName).clear();
+    });
+  }
+
+  async function idbPutMany(storeName, items) {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = d.transaction(storeName, "readwrite");
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+      const s = tx.objectStore(storeName);
+      (items || []).forEach(it => s.put(it));
+    });
+  }
+
+
