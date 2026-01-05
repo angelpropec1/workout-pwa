@@ -367,5 +367,23 @@
     </div>
   </div>
 
+
+  <div class="modal hidden" id="exportModal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">Export to ChatGPT</div>
+        <button class="pill" id="btnExportClose">Close</button>
+      </div>
+      <div class="mini" style="margin-bottom:8px;">Tap <b>Select all</b> then <b>Copy</b>, or use Share.</div>
+      <textarea id="exportTextArea" class="export-area" readonly></textarea>
+      <div class="row" style="margin-top:10px; width:100%;">
+        <button class="primary" id="btnExportSelectAll">Select all</button>
+        <button class="primary" id="btnExportCopy">Copy</button>
+        <button class="primary" id="btnExportShare">Share</button>
+      </div>
+      <div class="mini" id="exportModalStatus" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
 </body>
 </html>

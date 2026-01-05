@@ -765,6 +765,51 @@ const DB_NAME = "workout_log_db";
     const online = navigator.onLine !== false;
     const syncBtn = $("#btnSyncNow");
     const resetBtn = $("#btnCloudResetLocal");
+
+    // Export modal controls (v13)
+    $("#btnExportClose")?.addEventListener("click", () => closeExportModal());
+    $("#exportModal")?.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "exportModal") closeExportModal();
+    });
+    $("#btnExportSelectAll")?.addEventListener("click", () => {
+      const ta = $("#exportTextArea");
+      if (!ta) return;
+      ta.focus();
+      ta.select();
+    });
+    $("#btnExportCopy")?.addEventListener("click", async () => {
+      const ta = $("#exportTextArea");
+      const status = $("#exportModalStatus");
+      if (!ta) return;
+      const text = ta.value || "";
+      let ok = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          ok = true;
+        }
+      } catch (_) {}
+      if (!ok) ok = copyTextFallback(text);
+      if (status) status.textContent = ok ? "Copied ✅" : "Copy failed — tap Select all then Copy.";
+    });
+    $("#btnExportShare")?.addEventListener("click", async () => {
+      const ta = $("#exportTextArea");
+      const status = $("#exportModalStatus");
+      if (!ta) return;
+      const text = ta.value || "";
+      try {
+        if (navigator.share) {
+          await navigator.share({ text });
+          if (status) status.textContent = "Shared ✅";
+        } else {
+          if (status) status.textContent = "Share not available on this browser.";
+        }
+      } catch (_) {
+        if (status) status.textContent = "Share cancelled.";
+      }
+    });
+
+
     if (syncBtn) syncBtn.disabled = !online;
     if (resetBtn) resetBtn.disabled = !online;
     if (!online) {
@@ -998,7 +1043,53 @@ function setCloudStatus(text) {
     window.open("https://chatgpt.com", "_blank");
   }
 
-  // ---------- History ----------
+  
+  function copyTextFallback(text) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "true");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.left = "-1000px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function openExportModal(text) {
+    const modal = $("#exportModal");
+    const ta = $("#exportTextArea");
+    const status = $("#exportModalStatus");
+    if (!modal || !ta) {
+      // fallback: show prompt (old behaviour)
+      window.prompt("Copy this report:", text);
+      return;
+    }
+    ta.value = text;
+    if (status) status.textContent = "";
+    modal.classList.remove("hidden");
+
+    // ensure selection is easy on iOS
+    setTimeout(() => {
+      try {
+        ta.focus();
+      } catch (_) {}
+    }, 50);
+  }
+
+  function closeExportModal() {
+    const modal = $("#exportModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+// ---------- History ----------
   async function renderHistory() {
     const workouts = await idbGetAll("workouts");
     workouts.sort((a,b) => new Date(b.startedAt) - new Date(a.startedAt));
