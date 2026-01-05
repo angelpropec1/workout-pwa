@@ -88,6 +88,27 @@
           Creatine taken today
         </label>
 
+        <div class="row space-between" style="margin-top:12px;">
+          <div>
+            <div class="kicker">Sleep score</div>
+            <div style="font-size:22px; font-weight:900;" id="sleepScoreText">—</div>
+          </div>
+          <div>
+            <div class="kicker">Target</div>
+            <div style="font-size:22px; font-weight:900;" id="sleepTargetText">80</div>
+          </div>
+          <div>
+            <div class="kicker">Status</div>
+            <div style="font-size:22px; font-weight:900;" id="sleepStatusText">—</div>
+          </div>
+        </div>
+
+        <div class="row" style="width:100%;">
+          <input id="sleepInput" inputmode="numeric" pattern="[0-9]*" placeholder="Set sleep score (0-100)" style="flex:1;" />
+          <button class="primary" id="btnSetSleep">Set</button>
+          <button class="danger" id="btnResetSleep">Reset</button>
+        </div>
+
         <hr class="sep"/>
 
         <h3>Protein history (last 7 days)</h3>
