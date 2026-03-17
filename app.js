@@ -765,6 +765,7 @@ const DB_NAME = "workout_log_db";
     const online = navigator.onLine !== false;
     const syncBtn = $("#btnSyncNow");
     const resetBtn = $("#btnCloudResetLocal");
+    $("#btnResetUiState")?.addEventListener("click", () => resetUiState(true));
 
     // Export modal controls (v13)
     $("#btnExportClose")?.addEventListener("click", () => closeExportModal());
@@ -1087,6 +1088,49 @@ function setCloudStatus(text) {
   function closeExportModal() {
     const modal = $("#exportModal");
     if (modal) modal.classList.add("hidden");
+  }
+
+
+  // ---------- UI Recovery ----------
+  function resetUiState(showMessage) {
+    try {
+      localStorage.removeItem("actionModalOpen");
+      localStorage.removeItem("exportModalOpen");
+      localStorage.removeItem("exerciseModalOpen");
+      localStorage.removeItem("uiState");
+      localStorage.removeItem("pendingActionExerciseId");
+      sessionStorage.removeItem("actionModalOpen");
+      sessionStorage.removeItem("exportModalOpen");
+      sessionStorage.removeItem("exerciseModalOpen");
+      sessionStorage.removeItem("uiState");
+    } catch (_) {}
+
+    ["#actionModal","#exerciseModal","#exportModal","#exportSheet"].forEach((sel) => {
+      const el = $(sel);
+      if (!el) return;
+      el.classList.add("hidden");
+      el.classList.remove("show");
+      el.setAttribute("aria-hidden", "true");
+      el.style.display = "";
+    });
+
+    if (showMessage) {
+      const s = $("#uiResetStatus");
+      if (s) s.textContent = "UI state reset ✅";
+    }
+  }
+
+  function applyStartupRecovery() {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("resetUI") === "1") {
+        resetUiState(false);
+        url.searchParams.delete("resetUI");
+        history.replaceState({}, "", url.toString());
+      }
+    } catch (_) {}
+
+    resetUiState(false);
   }
 
 // ---------- History ----------
@@ -1550,7 +1594,7 @@ function setCloudStatus(text) {
     $("#btnResetSleep")?.addEventListener("click", () => resetSleepScoreToday());
 
     // Exercise modal
-    $("#btnCloseModal").addEventListener("click", () => hideModal("#exerciseModal"));
+    $("#btnCloseModal").addEventListener("click", () => { hideModal("#exerciseModal"); resetUiState(false); });
     $("#setCount").addEventListener("change", () => buildSetsUI(Number($("#setCount").value), state.currentExerciseDraft.setEntries, state.currentExerciseDraft.prevHints));
     $("#btnSaveExercise").addEventListener("click", saveExerciseLog);
     $("#btnActionNext").addEventListener("click", openActionModal);
@@ -1607,6 +1651,7 @@ function setCloudStatus(text) {
 
   // ---------- Init ----------
   async function init() {
+    applyStartupRecovery();
     db = await idbOpen();
     state.settings = await loadSettings();
     applySettingsToUI();
