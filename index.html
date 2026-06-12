@@ -15,6 +15,7 @@
       <div class="app-subtitle" id="subtitle">Ready.</div>
     </div>
     <div class="header-right">
+      <button class="ghost" id="btnProgress" aria-label="Progress">Progress</button>
       <button class="ghost" id="btnHistory" aria-label="History">History</button>
       <button class="ghost" id="btnSettings" aria-label="Settings">Settings</button>
     </div>
@@ -201,6 +202,24 @@
       </div>
     </section>
 
+    <!-- Progress -->
+    <section id="viewProgress" class="view">
+      <div class="card">
+        <div class="row space-between">
+          <h2>Progress</h2>
+          <button class="secondary" id="btnBackFromProgress">Back</button>
+        </div>
+        <div class="form">
+          <label>
+            Exercise
+            <select id="progressExercise"></select>
+          </label>
+        </div>
+        <div id="progressChart" style="margin-top:14px;"></div>
+        <div class="mini" id="progressSummary" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
     <!-- History -->
     <section id="viewHistory" class="view">
       <div class="card">
@@ -352,6 +371,12 @@
       </div>
       <div class="mini" id="actionStatus"></div>
     </div>
+  </div>
+
+  <!-- Update banner -->
+  <div id="updateBanner" class="update-banner hidden">
+    <span>New version ready 🎉</span>
+    <button class="primary" id="btnUpdateApp">Update</button>
   </div>
 
   <script src="app.js"></script>

@@ -1402,6 +1402,77 @@ function setCloudStatus(text) {
     resetUiState(false);
   }
 
+// ---------- Progress (per-exercise chart) ----------
+  function buildChartSvg(points, unit) {
+    if (!points.length) return `<div class="mini">No sessions logged yet for this exercise.</div>`;
+    const W = 320, H = 180, padL = 38, padR = 14, padT = 16, padB = 26;
+    const vals = points.map(p => p.value);
+    let min = Math.min(...vals), max = Math.max(...vals);
+    if (min === max) { min = Math.max(0, min - 1); max = max + 1; }
+    const X = (i) => padL + (W - padL - padR) * (points.length === 1 ? 0.5 : i / (points.length - 1));
+    const Y = (v) => padT + (H - padT - padB) * (1 - (v - min) / (max - min));
+
+    const path = points.map((p, i) => `${i ? "L" : "M"} ${X(i).toFixed(1)} ${Y(p.value).toFixed(1)}`).join(" ");
+    const dots = points.map((p, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.value).toFixed(1)}" r="3.5" fill="#4c8dff"/>`).join("");
+    const dateLbl = (p) => new Date(p.when).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
+    const last = points[points.length - 1];
+    const lastY = Y(last.value);
+    const lastLblY = lastY < padT + 14 ? lastY + 16 : lastY - 8;
+
+    return `
+      <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+        <line x1="${padL}" y1="${Y(max)}" x2="${W - padR}" y2="${Y(max)}" stroke="#262629" stroke-dasharray="3 4"/>
+        <line x1="${padL}" y1="${Y(min)}" x2="${W - padR}" y2="${Y(min)}" stroke="#262629"/>
+        <text x="${padL - 5}" y="${Y(max) + 3}" text-anchor="end" fill="#a6a6a9" font-size="9" font-family="sans-serif">${max}</text>
+        <text x="${padL - 5}" y="${Y(min) + 3}" text-anchor="end" fill="#a6a6a9" font-size="9" font-family="sans-serif">${min}</text>
+        <text x="${padL}" y="${H - 8}" fill="#a6a6a9" font-size="9" font-family="sans-serif">${dateLbl(points[0])}</text>
+        <text x="${W - padR}" y="${H - 8}" text-anchor="end" fill="#a6a6a9" font-size="9" font-family="sans-serif">${dateLbl(last)}</text>
+        <path d="${path}" stroke="#4c8dff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots}
+        <text x="${X(points.length - 1).toFixed(1)}" y="${lastLblY.toFixed(1)}" text-anchor="end" fill="#4c8dff" font-size="11" font-weight="700" font-family="sans-serif">${last.value} ${unit}</text>
+      </svg>
+    `;
+  }
+
+  async function renderProgressChart(exerciseId) {
+    const all = await idbGetAll("exerciseLogs");
+    const logs = all.filter(x => x.exerciseId === exerciseId && x.finishedAt && x.sets?.length);
+    logs.sort((a, b) => new Date(a.finishedAt) - new Date(b.finishedAt));
+
+    const weighted = isStrengthEx(exerciseId);
+    const unit = weighted ? "kg" : (isTimeEx(exerciseId) ? "sec" : "reps");
+    const points = logs
+      .map(l => {
+        const t = topSetFromLog(l);
+        return t ? { when: l.finishedAt, value: weighted ? Number(t.weightKg) : Number(t.reps) } : null;
+      })
+      .filter(Boolean)
+      .slice(-15); // last 15 sessions
+
+    $("#progressChart").innerHTML = buildChartSvg(points, unit);
+
+    if (points.length) {
+      const first = points[0].value;
+      const lastV = points[points.length - 1].value;
+      const best = Math.max(...points.map(p => p.value));
+      const diff = lastV - first;
+      const sign = diff > 0 ? "+" : "";
+      $("#progressSummary").textContent = `${points.length} session${points.length > 1 ? "s" : ""} • Best: ${best} ${unit} • Change: ${sign}${diff} ${unit}`;
+    } else {
+      $("#progressSummary").textContent = "Log a few workouts and your graph will appear here.";
+    }
+  }
+
+  async function openProgress() {
+    const sel = $("#progressExercise");
+    if (sel && !sel.options.length) {
+      sel.innerHTML = EXERCISES.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
+    }
+    await renderProgressChart(sel.value);
+    showView("#viewProgress");
+    setSubtitle("Progress.");
+  }
+
 // ---------- History ----------
   async function renderHistory() {
     const workouts = await idbGetAll("workouts");
@@ -1691,11 +1762,31 @@ function setCloudStatus(text) {
   }
 
 
-  // ---------- Service Worker ----------
+  // ---------- Service Worker (with update banner) ----------
+  function showUpdateBanner() {
+    const b = $("#updateBanner");
+    if (b) b.classList.remove("hidden");
+  }
+
   async function registerSW() {
     if (!("serviceWorker" in navigator)) return;
     try {
-      await navigator.serviceWorker.register("./sw.js");
+      const reg = await navigator.serviceWorker.register("./sw.js");
+
+      // A new version is already waiting (downloaded on a previous open)
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+
+      // A new version is found while the app is open
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) showUpdateBanner();
+        });
+      });
+
+      // Ask the browser to check for a new version on every launch
+      try { reg.update(); } catch (_) {}
     } catch (e) {
       // ignore
     }
@@ -1750,7 +1841,17 @@ function setCloudStatus(text) {
       setSubtitle("Cardio-only started.");
     });
 
+    // Update banner
+    $("#btnUpdateApp")?.addEventListener("click", () => window.location.reload());
+
     // Header buttons
+    $("#btnProgress")?.addEventListener("click", openProgress);
+    $("#btnBackFromProgress")?.addEventListener("click", () => {
+      showView("#viewHome");
+      setSubtitle("Ready.");
+    });
+    $("#progressExercise")?.addEventListener("change", () => renderProgressChart($("#progressExercise").value));
+
     $("#btnHistory").addEventListener("click", async () => {
       await renderHistory();
       showView("#viewHistory");
