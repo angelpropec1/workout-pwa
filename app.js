@@ -480,6 +480,97 @@ const DB_NAME = "workout_log_db";
     setSubtitle("Cardio saved.");
   }
 
+  // ---------- Inline set logging (tick a set -> pick reps / kg) ----------
+  const MAX_SETS = 6;
+
+  function inlineRepsOptions(exId, selected) {
+    const isTime = isTimeEx(exId);
+    const max = isTime ? 600 : 50;
+    const step = isTime ? 5 : 1;
+    const start = isTime ? 5 : 1;
+    let html = "";
+    for (let v = start; v <= max; v += step) {
+      html += `<option value="${v}"${v === selected ? " selected" : ""}>${v}</option>`;
+    }
+    return html;
+  }
+
+  function inlineKgOptions(selected) {
+    let html = "";
+    for (let v = 1; v <= 30; v++) {
+      html += `<option value="${v}"${v === selected ? " selected" : ""}>${v}</option>`;
+    }
+    return html;
+  }
+
+  const clampKg = (v) => Math.min(30, Math.max(1, Math.round(Number(v) || 10)));
+
+  function buildInlineSets(ex, existing, prev) {
+    const weighted = ex.type === "strength";
+    const isTime = ex.type === "bodyweight_time";
+    const unit = isTime ? "sec" : "reps";
+    const rows = [];
+    for (let i = 0; i < MAX_SETS; i++) {
+      const cur = existing?.sets?.[i] ?? null;
+      const hint = prev?.sets?.[i] ?? null;
+      const checked = !!cur;
+      const defReps = Number(cur?.reps) || Number(hint?.reps) || (isTime ? 30 : DEFAULTS.reps);
+      const defKg = clampKg(cur?.weightKg ?? hint?.weightKg ?? 10);
+      const hintTxt = hint ? (weighted ? `Prev: ${hint.weightKg}kg×${hint.reps}` : `Prev: ${hint.reps} ${unit}`) : "";
+      rows.push(`
+        <div class="iset-row">
+          <label class="iset-tick">
+            <input type="checkbox" class="isetChk" data-ex="${ex.id}" data-i="${i}" ${checked ? "checked" : ""}/>
+            Set ${i + 1}
+          </label>
+          <div class="iset-fields" style="${checked ? "" : "display:none;"}">
+            ${weighted ? `<select class="isetKg" data-ex="${ex.id}" data-i="${i}">${inlineKgOptions(defKg)}</select><span class="mini">kg</span>` : ""}
+            <select class="isetReps" data-ex="${ex.id}" data-i="${i}">${inlineRepsOptions(ex.id, defReps)}</select><span class="mini">${unit}</span>
+          </div>
+          ${hintTxt ? `<span class="mini iset-hint">${hintTxt}</span>` : ""}
+        </div>`);
+    }
+    return rows.join("");
+  }
+
+  function collectInlineEntries(exId) {
+    const entries = [];
+    $$(`.isetChk[data-ex="${exId}"]`).forEach(chk => {
+      if (!chk.checked) return;
+      const i = chk.getAttribute("data-i");
+      const repsSel = document.querySelector(`.isetReps[data-ex="${exId}"][data-i="${i}"]`);
+      const kgSel = document.querySelector(`.isetKg[data-ex="${exId}"][data-i="${i}"]`);
+      entries.push({ weightKg: kgSel ? Number(kgSel.value) : 0, reps: repsSel ? Number(repsSel.value) : 0 });
+    });
+    return entries;
+  }
+
+  async function saveInlineLog(exId) {
+    if (!state.currentWorkout) return;
+    const entries = collectInlineEntries(exId);
+    const key = `${state.currentWorkout.id}|${exId}`;
+    const notesEl = document.querySelector(`.isetNotes[data-ex="${exId}"]`);
+    const notes = notesEl ? notesEl.value.trim() : "";
+
+    if (!entries.length && !notes) {
+      await idbDel("exerciseLogs", key);
+    } else {
+      await idbPut("exerciseLogs", {
+        key,
+        workoutId: state.currentWorkout.id,
+        exerciseId: exId,
+        finishedAt: nowIso(),
+        sets: entries.map((s, i) => ({ set: i + 1, weightKg: Number(s.weightKg), reps: Number(s.reps) })),
+        notes,
+      });
+    }
+    state.cachedStats.delete(exId);
+    cloudPushBestEffort();
+
+    const statusEl = document.querySelector(`.iset-status[data-ex="${exId}"]`);
+    if (statusEl) statusEl.textContent = entries.length ? `Saved: ${entries.length} set${entries.length > 1 ? "s" : ""} ✅` : "";
+  }
+
   async function renderExerciseList() {
     const t = TEMPLATES[state.currentWorkout.templateId];
     const container = $("#exerciseList");
@@ -491,6 +582,8 @@ const DB_NAME = "workout_log_db";
 
       const stats = await computeStats(exId);
       const action = await loadAction(exId);
+      const existing = await idbGet("exerciseLogs", `${state.currentWorkout.id}|${exId}`);
+      const prev = await previousLog(exId, state.currentWorkout.startedAt);
 
       const lastLine = stats.last
         ? `Last: ${fmtTop(exId, stats.last.top)} (${stats.last.sets} sets)`
@@ -514,16 +607,39 @@ const DB_NAME = "workout_log_db";
             ${exercisePicsHtml(exId)}
           </div>
         </div>
-        <div class="exercise-actions">
-          <button class="primary" data-open="${exId}">Log</button>
+        <div class="iset-list">${buildInlineSets(ex, existing, prev)}</div>
+        <div class="row" style="width:100%;">
+          <input class="isetNotes" data-ex="${exId}" placeholder="Notes (optional)" value="${escapeHtml(existing?.notes ?? "")}" style="flex:1;"/>
+          <button class="secondary" data-action-ex="${exId}">Action</button>
         </div>
+        <div class="mini iset-status" data-ex="${exId}"></div>
       `;
       container.appendChild(card);
     }
 
-    $$("[data-open]").forEach(btn => {
-      btn.addEventListener("click", async () => openExerciseModal(btn.getAttribute("data-open")));
-    });
+    // Idempotent handlers (container persists across renders)
+    container.onchange = async (e) => {
+      const tEl = e.target;
+      if (tEl.classList.contains("isetChk")) {
+        const fields = tEl.closest(".iset-row")?.querySelector(".iset-fields");
+        if (fields) fields.style.display = tEl.checked ? "" : "none";
+        await saveInlineLog(tEl.getAttribute("data-ex"));
+      } else if (tEl.classList.contains("isetReps") || tEl.classList.contains("isetKg") || tEl.classList.contains("isetNotes")) {
+        await saveInlineLog(tEl.getAttribute("data-ex"));
+      }
+    };
+    container.onclick = async (e) => {
+      const btn = e.target.closest("[data-action-ex]");
+      if (!btn) return;
+      const exId = btn.getAttribute("data-action-ex");
+      state.currentExerciseId = exId;
+      state.currentExerciseDraft = {
+        workoutId: state.currentWorkout.id,
+        exerciseId: exId,
+        setEntries: collectInlineEntries(exId),
+      };
+      await openActionModal();
+    };
   }
 
   function makeSetRow(setIndex, weightOptionsHtml, repsOptionsHtml, defaultWeight, defaultReps, exType, exerciseId, prevHint) {
