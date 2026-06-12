@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Workout Log</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-title">Workout Log</div>
+      <div class="app-subtitle" id="subtitle">Ready.</div>
+    </div>
+    <div class="header-right">
+      <button class="ghost" id="btnHistory" aria-label="History">History</button>
+      <button class="ghost" id="btnSettings" aria-label="Settings">Settings</button>
+    </div>
+  </header>
+
+  <main id="app" class="app-main">
+    <!-- Home -->
+    <section id="viewHome" class="view active">
+            <div class="card">
+        <h2>Daily</h2>
+
+        <div class="mini" id="dailyDateText">Today</div>
+
+        <div class="row space-between">
+          <div>
+            <div class="kicker">Protein target</div>
+            <div style="font-size:22px; font-weight:900;" id="proteinTargetText">180g</div>
+          </div>
+          <div>
+            <div class="kicker">Consumed</div>
+            <div style="font-size:22px; font-weight:900;" id="proteinConsumedText">0g</div>
+          </div>
+          <div>
+            <div class="kicker">Left</div>
+            <div style="font-size:22px; font-weight:900;" id="proteinLeftText">180g</div>
+          </div>
+        </div>
+
+        <div class="row space-between" style="margin-top:12px;">
+          <div>
+            <div class="kicker">Steps target</div>
+            <div style="font-size:22px; font-weight:900;" id="stepsTargetText">12500</div>
+          </div>
+          <div>
+            <div class="kicker">Steps</div>
+            <div style="font-size:22px; font-weight:900;" id="stepsDoneText">0</div>
+          </div>
+          <div>
+            <div class="kicker">Left</div>
+            <div style="font-size:22px; font-weight:900;" id="stepsLeftText">12500</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="secondary" id="btnAdd1000">+1000</button>
+          <button class="secondary" id="btnAdd2000">+2000</button>
+          <button class="secondary" id="btnAdd5000">+5000</button>
+        </div>
+
+        <div class="row" style="width:100%;">
+          <input id="stepsAddInput" inputmode="numeric" pattern="[0-9]*" placeholder="Add steps (e.g., 2500)" style="flex:1;" />
+          <button class="primary" id="btnAddSteps">Add</button>
+          <button class="danger" id="btnResetSteps">Reset</button>
+        </div>
+
+
+        <div class="row">
+          <button class="secondary" id="btnAdd10">+10g</button>
+          <button class="secondary" id="btnAdd20">+20g</button>
+          <button class="secondary" id="btnAdd30">+30g</button>
+        </div>
+
+        <div class="row" style="width:100%;">
+          <input id="proteinAddInput" inputmode="numeric" pattern="[0-9]*" placeholder="Add grams (e.g., 35)" style="flex:1;" />
+          <button class="primary" id="btnAddProtein">Add</button>
+          <button class="danger" id="btnResetProtein">Reset</button>
+        </div>
+
+        <label class="inline" style="margin-top:10px;">
+          <input type="checkbox" id="chkCreatine" />
+          Creatine taken today
+        </label>
+
+        <div class="row space-between" style="margin-top:12px;">
+          <div>
+            <div class="kicker">Sleep score</div>
+            <div style="font-size:22px; font-weight:900;" id="sleepScoreText">—</div>
+          </div>
+          <div>
+            <div class="kicker">Target</div>
+            <div style="font-size:22px; font-weight:900;" id="sleepTargetText">80</div>
+          </div>
+          <div>
+            <div class="kicker">Status</div>
+            <div style="font-size:22px; font-weight:900;" id="sleepStatusText">—</div>
+          </div>
+        </div>
+
+        <div class="row" style="width:100%;">
+          <input id="sleepInput" inputmode="numeric" pattern="[0-9]*" placeholder="Set sleep score (0-100)" style="flex:1;" />
+          <button class="primary" id="btnSetSleep">Set</button>
+          <button class="danger" id="btnResetSleep">Reset</button>
+        </div>
+
+        <hr class="sep"/>
+
+        <h3>Protein history (last 7 days)</h3>
+        <div id="proteinHistoryList" class="history-list"></div>
+
+        <div class="mini" id="dailyStatus"></div>
+      </div>
+
+<div class="card">
+        <h2>Workouts</h2>
+        <div class="grid">
+          <button class="primary big" data-start-template="w1">Chest, Arms &amp; Stomach</button>
+          <button class="primary big" data-start-template="w2">Shoulders, Back &amp; Stomach</button>
+          <button class="primary big" data-start-template="w3">Legs &amp; Core</button>
+        </div>
+        <div class="row">
+          <button class="primary big" id="btnCardioOnly">Cardio Only</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Quick tips</h2>
+        <ul class="list">
+          <li>Tap an exercise to log sets fast.</li>
+          <li>Each exercise shows <b>Last</b>, <b>Best</b>, and your saved <b>Action Next Time</b>.</li>
+          <li>Finish workout → <b>Export to ChatGPT</b> copies a coaching report to paste here.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Workout -->
+    <section id="viewWorkout" class="view">
+      <div class="card">
+        <div class="workout-header">
+          <div>
+            <div class="kicker" id="workoutKicker">Workout</div>
+            <h2 id="workoutTitle">—</h2>
+            <div class="meta" id="workoutMeta">—</div>
+            <div class="form" style="margin-top:10px;">
+              <label>
+                Total workout time (minutes)
+                <input id="gymMins" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 75" />
+              </label>
+              <label>
+                Calories burned (from iWatch)
+                <input id="gymCals" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 520" />
+              </label>
+              <button class="secondary" id="btnSaveGymStats">Save</button>
+              <div class="mini" id="gymStatsSavedText"></div>
+            </div>
+          </div>
+          <div class="workout-actions">
+            <button class="secondary" id="btnBackToHomeFromWorkout">Back</button>
+            <button class="secondary" id="btnPauseWorkout">Pause</button>
+            <button class="danger" id="btnFinishWorkout">Finish</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Cardio (optional)</h3>
+        <div class="form">
+          <label>
+            Type
+            <select id="cardioType">
+              <option value="">— none —</option>
+              <option value="Running">Running</option>
+            </select>
+          </label>
+          <label>
+            Distance (km)
+            <input id="cardioDistance" inputmode="decimal" placeholder="e.g., 5.2" />
+          </label>
+          <label>
+            Time (minutes)
+            <input id="cardioMins" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 28" />
+          </label>
+          <label>
+            Notes (optional)
+            <input id="cardioNotes" placeholder="route / pace / how it felt" />
+          </label>
+          <button class="secondary" id="btnSaveCardio">Save cardio</button>
+        </div>
+        <div class="mini" id="cardioSavedText"></div>
+      </div>
+
+      <div class="card">
+        <h3>Exercises</h3>
+        <div id="exerciseList" class="exercise-list"></div>
+      </div>
+    </section>
+
+    <!-- History -->
+    <section id="viewHistory" class="view">
+      <div class="card">
+        <div class="row space-between">
+          <h2>History</h2>
+          <button class="secondary" id="btnBackFromHistory">Back</button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <div class="row">
+          <button class="danger" id="btnClearAll">Clear all data (this device)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Finish -->
+    <section id="viewFinish" class="view">
+      <div class="card">
+        <div class="row space-between">
+          <h2>Session saved</h2>
+          <button class="secondary" id="btnDone">Done</button>
+        </div>
+        <div class="summary" id="finishSummary"></div>
+        <div class="row">
+          <button class="primary" id="btnExportChatGPT">Export to ChatGPT (copy)</button>
+          <button class="secondary" id="btnOpenChatGPT">Open ChatGPT</button>
+        </div>
+        <div class="mini" id="exportStatus"></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="viewSettings" class="view">
+      <div class="card">
+        <div class="row space-between">
+          <h2>Settings</h2>
+          <button class="secondary" id="btnBackFromSettings">Back</button>
+        </div>
+
+        <div class="form">
+          <label>
+            Max weight (kg) for dropdowns
+            <input id="maxWeight" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 200" />
+          </label>
+          <label class="inline">
+            <input type="checkbox" id="showBestToggle" />
+            Show all-time Best (in addition to Last)
+          </label>
+          <button class="secondary" id="btnSaveSettings">Save settings</button>
+        </div>
+
+        <hr class="sep"/>
+
+        <h3>Backup</h3>
+        <div class="row">
+          <button class="secondary" id="btnExportBackup">Export backup (JSON)</button>
+          <label class="file">
+            <input type="file" id="fileImport" accept="application/json" />
+            <span class="secondary buttonlike">Import backup</span>
+          </label>
+        </div>
+
+        <div class="mini" id="settingsStatus"></div>
+      </div>
+    
+      <div class="card">
+        <h2>Cloud Sync</h2>
+        <div class="mini">Syncs workouts across devices via Firebase (public).</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="secondary" id="btnSyncNow">Sync now</button>
+          <button class="danger" id="btnCloudResetLocal">Reset local from cloud</button>
+        </div>
+        <div class="mini" id="cloudSyncInfo"></div>
+      </div>
+
+      <div class="card">
+        <h2>UI Recovery</h2>
+        <div class="mini">If a popup or screen ever gets stuck, this clears UI-only state on this device without deleting workouts.</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="danger" id="btnResetUiState">Reset UI state</button>
+        </div>
+        <div class="mini" id="uiResetStatus"></div>
+      </div>
+</section>
+  </main>
+
+  <!-- Exercise Modal -->
+  <div class="modal" id="exerciseModal" aria-hidden="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <div class="kicker" id="modalKicker">Exercise</div>
+          <h2 id="modalTitle">—</h2>
+          <div class="mini" id="modalLastBest">—</div>
+          <div class="mini" id="modalActionHint">—</div>
+          <div id="modalPics" style="margin-top:8px;"></div>
+        </div>
+        <button class="ghost" id="btnCloseModal" aria-label="Close">Close</button>
+      </div>
+
+      <div class="form">
+        <label>
+          Sets
+          <select id="setCount">
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="setsContainer" class="sets"></div>
+
+      <div class="form">
+        <label>
+          Notes (optional)
+          <input id="exerciseNotes" placeholder="e.g., slow negatives / felt strong / shoulder tweak" />
+        </label>
+      </div>
+
+      <div class="modal-footer">
+        <button class="secondary" id="btnActionNext">Action next time</button>
+        <button class="primary" id="btnSaveExercise">Save exercise</button>
+      </div>
+
+      <div class="mini" id="modalStatus"></div>
+    </div>
+  </div>
+
+  <!-- Action Modal -->
+  <div class="modal" id="actionModal" aria-hidden="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <div class="kicker">Action next time</div>
+          <h2 id="actionTitle">—</h2>
+          <div class="mini" id="actionSuggestion">—</div>
+        </div>
+        <button class="ghost" id="btnCloseAction" aria-label="Close">Close</button>
+      </div>
+      <div class="form">
+        <label>
+          Saved action (shown next time)
+          <textarea id="actionText" rows="4" placeholder="e.g., Add +2.5kg if you hit 10 reps on sets 1–2"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="btnUseSuggestion">Use suggestion</button>
+        <button class="primary" id="btnSaveAction">Save action</button>
+      </div>
+      <div class="mini" id="actionStatus"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+
+  <!-- Export Sheet -->
+  <div id="exportSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="sheet-inner">
+      <div class="sheet-header">
+        <div>
+          <div id="exportTitle" class="sheet-title">Export to ChatGPT</div>
+          <div class="mini" id="exportHint">Tap Copy, then paste into ChatGPT.</div>
+        </div>
+        <button class="secondary" id="btnCloseExport">Close</button>
+      </div>
+
+      <textarea id="exportText" class="export-text" readonly></textarea>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="primary" id="btnCopyExport">Copy to Clipboard</button>
+        <button class="secondary" id="btnOpenChatGPT">Open ChatGPT</button>
+      </div>
+
+      <div class="mini" id="exportStatus"></div>
+    </div>
+  </div>
+
+
+  <div class="modal hidden" id="exportModal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">Export to ChatGPT</div>
+        <button class="pill" id="btnExportClose">Close</button>
+      </div>
+      <div class="mini" style="margin-bottom:8px;">Tap <b>Select all</b> then <b>Copy</b>, or use Share.</div>
+      <textarea id="exportTextArea" class="export-area" readonly></textarea>
+      <div class="row" style="margin-top:10px; width:100%;">
+        <button class="primary" id="btnExportSelectAll">Select all</button>
+        <button class="primary" id="btnExportCopy">Copy</button>
+        <button class="primary" id="btnExportShare">Share</button>
+      </div>
+      <div class="mini" id="exportModalStatus" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+</body>
+</html>
