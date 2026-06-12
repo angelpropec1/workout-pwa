@@ -22,39 +22,36 @@
   const round1 = (n) => Math.round(n * 10) / 10;
 
   // ---------- Data (Exercises + Templates) ----------
+  // Types:
+  //  strength        -> weight (kg) + reps  (dumbbell only)
+  //  bodyweight      -> reps only
+  //  bodyweight_time -> seconds only (holds)
   const EXERCISES = [
-    // Chest
-    { id:"seated_chest_press", name:"Seated chest press", group:"Chest", type:"strength" },
-    { id:"bench_press", name:"Bench press", group:"Chest", type:"strength" },
-    { id:"decline_bench_press", name:"Decline bench press", group:"Chest", type:"strength" },
-    { id:"incline_bench_press", name:"Incline bench press", group:"Chest", type:"strength" },
-    { id:"seated_butterfly", name:"Seated butterfly", group:"Chest", type:"strength" },
+    // Chest, Arms & Stomach
+    { id:"barbell_21s", name:"21's barbells", group:"Arms", type:"bodyweight" },
+    { id:"tricep_dips", name:"Tricep dips", group:"Arms", type:"bodyweight" },
     { id:"pushups", name:"Pushups", group:"Chest", type:"bodyweight" },
-    // Arms
-    { id:"seated_barbell", name:"Seated barbell", group:"Arms", type:"strength" },
-    { id:"barbell_21s", name:"21’s barbell", group:"Arms", type:"strength" },
-    { id:"tricep_pulldown", name:"Tricep pull down", group:"Arms", type:"strength" },
-    { id:"dips", name:"Dips", group:"Arms", type:"bodyweight" },
-    // Stomach/Core
-    { id:"situps", name:"Sit-ups", group:"Core", type:"bodyweight" },
-    { id:"leg_raises", name:"Leg raises", group:"Core", type:"bodyweight" },
-    { id:"cycle_crunch", name:"Cycle crunch", group:"Core", type:"bodyweight" },
-    { id:"plank", name:"Plank", group:"Core", type:"bodyweight_time" },
-    // Shoulders
-    { id:"seated_shoulder_press", name:"Seated shoulder press", group:"Shoulders", type:"strength" },
-    { id:"db_reverse_fly", name:"Dumbbell reverse fly", group:"Shoulders", type:"strength" },
-    { id:"db_front_raises", name:"Dumbbell front raises", group:"Shoulders", type:"strength" },
-    { id:"weight_steering", name:"Weight steering", group:"Shoulders", type:"strength" },
-    // Back
-    { id:"lat_pulldown", name:"Lat pull down", group:"Back", type:"strength" },
-    { id:"seated_pulldown", name:"Seated pull down weights", group:"Back", type:"strength" },
-    { id:"seated_pull_row", name:"Seated pull row weights", group:"Back", type:"strength" },
-    { id:"back_extensions", name:"Back extensions", group:"Back", type:"bodyweight" },
-    // Legs
-    { id:"seated_squats", name:"Seated squats", group:"Legs", type:"strength" },
-    { id:"calf_extensions", name:"Calf extensions", group:"Legs", type:"strength" },
-    { id:"leg_extensions", name:"Leg extensions", group:"Legs", type:"strength" },
-    { id:"leg_curl", name:"Leg curl", group:"Legs", type:"strength" },
+    { id:"tricep_ext_barbell", name:"Tricep extension barbell", group:"Arms", type:"bodyweight" },
+    { id:"ring_flys", name:"Ring flys", group:"Chest", type:"bodyweight" },
+    { id:"ring_crossover_pushups", name:"Ring crossover push-ups", group:"Chest", type:"bodyweight" },
+    { id:"roman_chair", name:"Roman chair", group:"Stomach", type:"bodyweight" },
+    { id:"bench_leg_raises", name:"Bench leg raises", group:"Stomach", type:"bodyweight" },
+    // Shoulders, Back & Stomach
+    { id:"db_shoulder_press", name:"Dumbbell shoulder press", group:"Shoulders", type:"strength" },
+    { id:"db_lateral_raise", name:"Dumbbell lateral raise", group:"Shoulders", type:"strength" },
+    { id:"db_forward_raise", name:"Dumbbell forward raise", group:"Shoulders", type:"strength" },
+    { id:"ring_face_pullup", name:"Ring face pull up", group:"Back", type:"bodyweight" },
+    { id:"ring_pike_hold", name:"Ring pike hold", group:"Stomach", type:"bodyweight_time" },
+    { id:"parallettes_l_sit", name:"Parallettes L sit", group:"Stomach", type:"bodyweight_time" },
+    { id:"plank", name:"Plank", group:"Stomach", type:"bodyweight_time" },
+    // Legs & Core
+    { id:"kb_squats", name:"Kettlebell squats", group:"Legs", type:"bodyweight" },
+    { id:"kb_lunge_switches", name:"Kettlebell lunge switches", group:"Legs", type:"bodyweight" },
+    { id:"kb_swings", name:"Kettlebell swings", group:"Legs", type:"bodyweight" },
+    { id:"kb_goblet_squat", name:"Kettlebell goblet squat", group:"Legs", type:"bodyweight" },
+    { id:"pendulum_lunges", name:"Pendulum lunges", group:"Legs", type:"bodyweight" },
+    { id:"kb_russian_twists", name:"Kettlebell russian twists", group:"Core", type:"bodyweight" },
+    { id:"kb_hollow_hold_scissors", name:"Kettlebell hollow hold scissors", group:"Core", type:"bodyweight" },
   ];
 
   const TEMPLATES = {
@@ -62,31 +59,155 @@
       id:"w1",
       name:"Chest, Arms & Stomach",
       exercises:[
-        "seated_chest_press","bench_press","incline_bench_press","decline_bench_press","seated_butterfly","pushups",
-        "seated_barbell","barbell_21s","tricep_pulldown","dips",
-        "situps","leg_raises","cycle_crunch","plank"
+        "barbell_21s","tricep_dips","pushups","tricep_ext_barbell",
+        "ring_flys","ring_crossover_pushups","roman_chair","bench_leg_raises"
       ],
     },
     w2: {
       id:"w2",
       name:"Shoulders, Back & Stomach",
       exercises:[
-        "seated_shoulder_press","db_reverse_fly","db_front_raises","weight_steering",
-        "lat_pulldown","seated_pulldown","seated_pull_row","back_extensions",
-        "situps","leg_raises","cycle_crunch","plank"
+        "db_shoulder_press","db_lateral_raise","db_forward_raise",
+        "ring_face_pullup","ring_pike_hold","parallettes_l_sit","plank"
       ],
     },
     w3: {
       id:"w3",
       name:"Legs & Core",
       exercises:[
-        "seated_squats","calf_extensions","leg_extensions","leg_curl",
-        "situps","leg_raises","cycle_crunch","plank"
+        "kb_squats","kb_lunge_switches","kb_swings","kb_goblet_squat",
+        "pendulum_lunges","kb_russian_twists","kb_hollow_hold_scissors"
       ],
     },
   };
 
   const findExercise = (id) => EXERCISES.find(x => x.id === id);
+  const exType = (id) => findExercise(id)?.type ?? "bodyweight";
+  const isTimeEx = (id) => exType(id) === "bodyweight_time";
+  const isStrengthEx = (id) => exType(id) === "strength";
+
+  // Format a top set according to exercise type (kg×reps / reps / sec)
+  function fmtTop(exerciseId, top) {
+    if (!top) return "—";
+    if (isTimeEx(exerciseId)) return `${top.reps} sec`;
+    if (isStrengthEx(exerciseId)) return `${top.weightKg}kg × ${top.reps}`;
+    return `${top.reps} reps`;
+  }
+
+  // ---------- Exercise pictograms (blue figure on black) ----------
+  const PIC_BLUE = "#4c8dff";
+  const pHead = (x, y) => `<circle cx="${x}" cy="${y}" r="4.5" fill="${PIC_BLUE}" stroke="none"/>`;
+  const pL = (pts) => `<polyline points="${pts}"/>`;
+  const pKb = (x, y) => `<path d="M ${x-3.5} ${y-3} q 3.5 -6 7 0"/><circle cx="${x}" cy="${y+1}" r="4" fill="${PIC_BLUE}" stroke="none"/>`;
+  const pDb = (x, y) => `<line x1="${x-5}" y1="${y}" x2="${x+5}" y2="${y}" stroke-width="6"/>`;
+  const pDbV = (x, y) => `<line x1="${x}" y1="${y-5}" x2="${x}" y2="${y+5}" stroke-width="6"/>`;
+  const pBar = (x, y, w=9) => `<line x1="${x-w}" y1="${y}" x2="${x+w}" y2="${y}"/><line x1="${x-w}" y1="${y-3}" x2="${x-w}" y2="${y+3}"/><line x1="${x+w}" y1="${y-3}" x2="${x+w}" y2="${y+3}"/>`;
+  const pGround = () => `<line x1="6" y1="57" x2="58" y2="57" opacity="0.45"/>`;
+  const pRing = (x, y, topX=x) => `<line x1="${topX}" y1="2" x2="${x}" y2="${y-3}"/><circle cx="${x}" cy="${y}" r="3"/>`;
+  const pArrowR = (x, y) => `<path d="M ${x} ${y} h 8 m 0 0 l -3 -3 m 3 3 l -3 3" stroke-width="2" opacity="0.8"/>`;
+  const pArrowL = (x, y) => `<path d="M ${x} ${y} h -8 m 0 0 l 3 -3 m -3 3 l 3 3" stroke-width="2" opacity="0.8"/>`;
+
+  // [startPose, endPose] per exercise
+  const EXERCISE_PICS = {
+    barbell_21s: [
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,22 26,38")+pL("32,22 38,38")+pBar(32,40,12),
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,22 26,32 25,24")+pL("32,22 38,32 39,24")+pBar(32,23,12),
+    ],
+    tricep_dips: [
+      pL("16,30 42,30")+pL("20,30 20,56")+pL("38,30 38,56")+pHead(29,8)+pL("29,13 29,32")+pL("29,17 29,30")+pL("29,32 33,44 30,54"),
+      pL("16,30 42,30")+pL("20,30 20,56")+pL("38,30 38,56")+pHead(29,16)+pL("29,21 29,38")+pL("29,24 37,26 35,30")+pL("29,38 33,48 30,56"),
+    ],
+    pushups: [
+      pGround()+pHead(14,24)+pL("16,30 52,52")+pL("16,30 16,56"),
+      pGround()+pHead(13,41)+pL("16,46 52,52")+pL("16,46 24,50 24,56"),
+    ],
+    tricep_ext_barbell: [
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,20 33,6")+pBar(33,6,8),
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,20 33,11 43,16")+pBar(45,17,7),
+    ],
+    ring_flys: [
+      pRing(16,24,12)+pRing(48,24,52)+pHead(32,14)+pL("32,19 32,40")+pL("27,56 32,40 37,56")+pL("32,23 17,23")+pL("32,23 47,23"),
+      pRing(26,22,12)+pRing(38,22,52)+pHead(32,14)+pL("32,19 32,40")+pL("27,56 32,40 37,56")+pL("32,25 27,21")+pL("32,25 37,21"),
+    ],
+    ring_crossover_pushups: [
+      pGround()+pRing(20,42,20)+pHead(16,24)+pL("19,30 52,50")+pL("19,30 20,40"),
+      pGround()+pRing(21,40,20)+pHead(16,37)+pL("19,42 52,52")+pL("19,42 27,45 22,41"),
+    ],
+    roman_chair: [
+      pGround()+pL("30,42 54,42")+pL("34,42 34,56")+pL("50,42 50,56")+pL("36,40 52,41")+pHead(11,34)+pL("34,40 14,36"),
+      pGround()+pL("30,42 54,42")+pL("34,42 34,56")+pL("50,42 50,56")+pL("36,40 52,41")+pHead(18,54)+pL("34,40 20,51"),
+    ],
+    bench_leg_raises: [
+      pL("12,42 52,42")+pL("16,42 16,54")+pL("48,42 48,54")+pHead(15,36)+pL("20,39 38,39")+pL("38,39 56,34")+pL("24,39 24,45"),
+      pL("12,42 52,42")+pL("16,42 16,54")+pL("48,42 48,54")+pHead(15,36)+pL("20,39 38,39")+pL("38,39 40,16")+pL("24,39 24,45"),
+    ],
+    db_shoulder_press: [
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,22 24,28 23,19")+pL("32,22 40,28 41,19")+pDb(23,15)+pDb(41,15),
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,22 25,9")+pL("32,22 39,9")+pDb(25,6)+pDb(39,6),
+    ],
+    db_lateral_raise: [
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,22 26,38")+pL("32,22 38,38")+pDb(25,41)+pDb(39,41),
+      pHead(32,12)+pL("32,17 32,38")+pL("27,56 32,38 37,56")+pL("32,22 16,22")+pL("32,22 48,22")+pDbV(13,22)+pDbV(51,22),
+    ],
+    db_forward_raise: [
+      pHead(30,12)+pL("30,17 30,38")+pL("26,56 30,38 34,56")+pL("30,21 35,37")+pDb(36,40),
+      pHead(30,12)+pL("30,17 30,38")+pL("26,56 30,38 34,56")+pL("30,21 49,21")+pDbV(52,21),
+    ],
+    ring_face_pullup: [
+      pGround()+pRing(41,23,46)+pHead(36,23)+pL("20,56 34,28")+pL("32,30 40,25"),
+      pGround()+pRing(37,19,46)+pHead(31,17)+pL("20,56 30,22")+pL("29,25 38,22 35,18"),
+    ],
+    ring_pike_hold: [
+      pGround()+pRing(48,37,48)+pHead(12,30)+pL("14,36 47,38")+pL("14,36 14,56"),
+      pGround()+pRing(48,35,48)+pHead(12,33)+pL("14,38 32,18 47,34")+pL("14,38 14,56"),
+    ],
+    parallettes_l_sit: [
+      pGround()+pL("20,42 34,42")+pL("23,42 23,56")+pL("31,42 31,56")+pHead(27,12)+pL("27,17 27,36")+pL("27,21 27,40")+pL("27,36 36,40 36,50"),
+      pGround()+pL("20,42 34,42")+pL("23,42 23,56")+pL("31,42 31,56")+pHead(27,12)+pL("27,17 27,36")+pL("27,21 27,40")+pL("27,36 48,34"),
+    ],
+    plank: [
+      pGround()+pHead(13,32)+pL("18,36 50,48 52,56")+pL("20,38 16,52 26,54"),
+      pGround()+pHead(13,26)+pL("18,31 50,48 52,56")+pL("18,31 16,54"),
+    ],
+    kb_squats: [
+      pHead(30,12)+pL("30,17 30,38")+pL("26,56 30,38 34,56")+pL("30,21 33,34")+pKb(34,39),
+      pHead(30,24)+pL("30,29 26,40")+pL("26,40 37,44 37,56")+pL("26,40 27,48 24,56")+pL("30,31 38,37")+pKb(39,42),
+    ],
+    kb_lunge_switches: [
+      pHead(32,14)+pL("32,19 32,38")+pL("32,38 42,46 42,56")+pL("32,38 24,50 28,56")+pL("32,23 36,29")+pKb(37,33),
+      pHead(32,14)+pL("32,19 32,38")+pL("32,38 22,46 22,56")+pL("32,38 40,50 36,56")+pL("32,23 28,29")+pKb(27,33),
+    ],
+    kb_swings: [
+      pGround()+pHead(22,19)+pL("24,24 33,38")+pL("33,38 29,56")+pL("33,38 38,56")+pL("26,27 34,45")+pKb(35,49),
+      pGround()+pHead(28,12)+pL("28,17 28,38")+pL("24,56 28,38 32,56")+pL("28,21 47,23")+pKb(50,25),
+    ],
+    kb_goblet_squat: [
+      pHead(32,10)+pL("32,15 32,36")+pL("27,56 32,36 37,56")+pL("32,20 28,26")+pL("32,20 36,26")+pKb(32,28),
+      pHead(32,20)+pL("32,25 32,38")+pL("32,38 22,42 24,56")+pL("32,38 42,42 40,56")+pL("32,28 28,32")+pL("32,28 36,32")+pKb(32,34),
+    ],
+    pendulum_lunges: [
+      pGround()+pArrowR(44,22)+pHead(30,16)+pL("30,21 30,38")+pL("30,38 40,46 40,56")+pL("30,38 22,50 26,56"),
+      pGround()+pArrowL(20,22)+pHead(30,16)+pL("30,21 30,38")+pL("30,38 36,46 36,56")+pL("30,38 18,48 14,56"),
+    ],
+    kb_russian_twists: [
+      pGround()+pHead(24,22)+pL("34,46 26,28")+pL("34,46 46,36 52,42")+pL("27,32 15,41")+pKb(13,44),
+      pGround()+pHead(24,22)+pL("34,46 26,28")+pL("34,46 46,36 52,42")+pL("27,32 40,42")+pKb(43,45),
+    ],
+    kb_hollow_hold_scissors: [
+      pGround()+pHead(12,42)+pL("17,44 36,48")+pL("36,48 54,34")+pL("36,48 52,46")+pL("20,43 24,32")+pKb(25,29),
+      pGround()+pHead(12,42)+pL("17,44 36,48")+pL("36,48 54,44")+pL("36,48 50,30")+pL("20,43 24,32")+pKb(25,29),
+    ],
+  };
+
+  function pic(content) {
+    return `<svg class="ex-pic" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="0.5" y="0.5" width="63" height="63" rx="12" fill="#000"/><g fill="none" stroke="${PIC_BLUE}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${content}</g></svg>`;
+  }
+
+  function exercisePicsHtml(exerciseId) {
+    const p = EXERCISE_PICS[exerciseId];
+    if (!p) return "";
+    return `<div class="exercise-pics">${pic(p[0])}${pic(p[1])}</div>`;
+  }
 
   // ---------- Defaults ----------
   const DEFAULTS = {
@@ -229,8 +350,8 @@ const DB_NAME = "workout_log_db";
 
   function buildRepsOptions(exerciseId) {
     const opts = [];
-    if (exerciseId === "plank") {
-      for (let s = 0; s <= 600; s += 10) {
+    if (isTimeEx(exerciseId)) {
+      for (let s = 0; s <= 600; s += 5) {
         opts.push(`<option value="${s}">${s}</option>`);
       }
       return opts.join("");
@@ -324,6 +445,7 @@ const DB_NAME = "workout_log_db";
     $("#workoutKicker").textContent = "Workout in progress";
     $("#cardioType").value = "";
     $("#cardioMins").value = "";
+    if ($("#cardioDistance")) $("#cardioDistance").value = "";
     $("#cardioNotes").value = "";
     $("#cardioSavedText").textContent = "";
 
@@ -343,13 +465,15 @@ const DB_NAME = "workout_log_db";
     if (!state.currentWorkout) return;
     const type = $("#cardioType").value.trim();
     const mins = clampInt($("#cardioMins").value.trim(), 0);
+    const distRaw = $("#cardioDistance") ? $("#cardioDistance").value.trim() : "";
+    const distanceKm = distRaw ? (Number.isFinite(Number(distRaw)) ? round1(Number(distRaw)) : null) : null;
     const notes = $("#cardioNotes").value.trim();
     if (!type) {
       state.currentWorkout.cardio = null;
       $("#cardioSavedText").textContent = "No cardio saved.";
     } else {
-      state.currentWorkout.cardio = { type, mins, notes };
-      $("#cardioSavedText").textContent = `Saved: ${type}, ${mins} min${notes ? " — " + notes : ""}`;
+      state.currentWorkout.cardio = { type, mins, distanceKm, notes };
+      $("#cardioSavedText").textContent = `Saved: ${type}, ${mins} min${distanceKm ? `, ${distanceKm} km` : ""}${notes ? " — " + notes : ""}`;
     }
     await idbPut("workouts", state.currentWorkout);
     cloudPushBestEffort();
@@ -369,10 +493,10 @@ const DB_NAME = "workout_log_db";
       const action = await loadAction(exId);
 
       const lastLine = stats.last
-        ? `Last: ${stats.last.top.weightKg}kg × ${stats.last.top.reps} (${stats.last.sets} sets)`
+        ? `Last: ${fmtTop(exId, stats.last.top)} (${stats.last.sets} sets)`
         : "Last: —";
       const bestLine = state.settings.showBest && stats.best
-        ? `Best: ${stats.best.top.weightKg}kg × ${stats.best.top.reps}`
+        ? `Best: ${fmtTop(exId, stats.best.top)}`
         : (state.settings.showBest ? "Best: —" : "");
 
       const actionLine = action ? `Action: ${action}` : "Action: —";
@@ -385,7 +509,10 @@ const DB_NAME = "workout_log_db";
             <div class="exercise-name">${ex.name}</div>
             <div class="exercise-mini">${lastLine}${bestLine ? "<br/>" + bestLine : ""}<br/>${actionLine}</div>
           </div>
-          <div class="badge">${ex.group}</div>
+          <div class="exercise-side">
+            <div class="badge">${ex.group}</div>
+            ${exercisePicsHtml(exId)}
+          </div>
         </div>
         <div class="exercise-actions">
           <button class="primary" data-open="${exId}">Log</button>
@@ -414,7 +541,7 @@ const DB_NAME = "workout_log_db";
         </div>
       `;
 
-    const label = (exerciseId === "plank") ? "sec" : "reps";
+    const label = isTimeEx(exerciseId) ? "sec" : "reps";
     const repsCol = `
         <div>
           <select class="repsSel" data-set="${setIndex}">
@@ -427,7 +554,7 @@ const DB_NAME = "workout_log_db";
     const hint = prevHint ? (() => {
       const w = Number(prevHint.weightKg ?? 0);
       const r = Number(prevHint.reps ?? 0);
-      if (exerciseId === "plank") return `Prev: ${r} sec`;
+      if (isTimeEx(exerciseId)) return `Prev: ${r} sec`;
       if (isBody) return `Prev: ${r} reps`;
       return `Prev: ${w}kg×${r}`;
     })() : "";
@@ -501,12 +628,14 @@ const DB_NAME = "workout_log_db";
 
     $("#modalTitle").textContent = ex.name;
     $("#modalKicker").textContent = `${ex.group}`;
+    const modalPics = $("#modalPics");
+    if (modalPics) modalPics.innerHTML = exercisePicsHtml(exerciseId);
     $("#exerciseNotes").value = state.currentExerciseDraft.notes || "";
     $("#setCount").value = String(state.currentExerciseDraft.sets || DEFAULTS.sets);
 
-    const lastTxt = stats.last ? `Last: ${stats.last.top.weightKg}kg × ${stats.last.top.reps}` : "Last: —";
+    const lastTxt = stats.last ? `Last: ${fmtTop(exerciseId, stats.last.top)}` : "Last: —";
     const bestTxt = state.settings.showBest
-      ? (stats.best ? `Best: ${stats.best.top.weightKg}kg × ${stats.best.top.reps}` : "Best: —")
+      ? (stats.best ? `Best: ${fmtTop(exerciseId, stats.best.top)}` : "Best: —")
       : "";
     $("#modalLastBest").textContent = bestTxt ? `${lastTxt}  •  ${bestTxt}` : lastTxt;
 
@@ -617,6 +746,23 @@ const DB_NAME = "workout_log_db";
     })();
 
     const last = stats?.last?.top ?? null;
+    const timeBased = isTimeEx(exerciseId);
+    const weighted = isStrengthEx(exerciseId);
+
+    if (timeBased) {
+      if (!topToday) return "Aim: hold with clean form, build up time gradually.";
+      if (!last) return "Next time: add +5–10 sec to your best hold.";
+      if (topToday.reps >= last.reps) return "Next time: add +5–10 sec on your longest hold.";
+      return "Next time: aim to match your last best hold time.";
+    }
+
+    if (!weighted) {
+      if (!topToday) return "Aim: complete 4×10 with clean form.";
+      if (!last) return "Next time: add +1–2 reps on your first set.";
+      if (topToday.reps >= last.reps) return "Next time: add +1 rep per set (or slow the tempo for difficulty).";
+      return "Next time: aim to match last time, focus on full range of motion.";
+    }
+
     if (!topToday) return "Aim: complete 4×10 with clean form.";
 
     if (!last) {
@@ -978,19 +1124,20 @@ function setCloudStatus(text) {
     out.push(`Started: ${fmtDate(workout.startedAt)}`);
     out.push(`Finished: ${workout.finishedAt ? fmtDate(workout.finishedAt) : "—"}`);
     out.push(`Duration: ${durMin} min`);
-    if (workout.gymMins != null) out.push(`Gym time: ${workout.gymMins} min`);
+    if (workout.gymMins != null) out.push(`Workout time: ${workout.gymMins} min`);
     if (workout.calories != null) out.push(`Calories (iWatch): ${workout.calories}`);
     out.push("");
 
     if (workout.cardio?.type) {
       out.push(`CARDIO`);
-      out.push(`- ${workout.cardio.type}: ${workout.cardio.mins ?? 0} min${workout.cardio.notes ? " — " + workout.cardio.notes : ""}`);
+      const distTxt = workout.cardio.distanceKm ? `, ${workout.cardio.distanceKm} km` : "";
+      out.push(`- ${workout.cardio.type}: ${workout.cardio.mins ?? 0} min${distTxt}${workout.cardio.notes ? " — " + workout.cardio.notes : ""}`);
       out.push("");
     }
 
     out.push(`EXERCISES`);
     for (const log of logs) {
-      const ex = findExercise(log.exerciseId);
+      const ex = findExercise(log.exerciseId) ?? { name: log.exerciseId, group: "", type: "bodyweight" };
       const stats = await computeStats(log.exerciseId); // includes last/best; NOTE: last includes this log too, but ok for export
       // Build last excluding current: quick method: find previous log
       const prev = await previousLog(log.exerciseId, log.finishedAt);
@@ -999,13 +1146,19 @@ function setCloudStatus(text) {
 
       const top = topSetFromLog(log);
       const sets = log.sets.length;
-      const vol = volumeFromLog(log);
+      const timeBased = ex.type === "bodyweight_time";
+      const weighted = ex.type === "strength";
+      const unit = timeBased ? "sec" : "reps";
 
-      out.push(`- ${ex.name} (${ex.group})`);
-      out.push(`  Today: top ${top ? `${top.weightKg}kg×${top.reps}` : "—"} | Sets: ${sets} | Volume: ${Math.round(vol)}kg`);
-      out.push(`  Last: ${prevTop ? `${prevTop.weightKg}kg×${prevTop.reps}` : "—"}${prev ? ` (${fmtDate(prev.finishedAt)})` : ""}`);
-      out.push(`  Best: ${best ? `${best.weightKg}kg×${best.reps}` : "—"}`);
-      out.push(`  Sets logged: ${log.sets.map(s => `${s.weightKg}×${s.reps}`).join("  |  ")}`);
+      const workLine = weighted
+        ? `Volume: ${Math.round(volumeFromLog(log))}kg`
+        : `Total: ${log.sets.reduce((a, s) => a + Number(s.reps ?? 0), 0)} ${unit}`;
+
+      out.push(`- ${ex.name}${ex.group ? ` (${ex.group})` : ""}`);
+      out.push(`  Today: top ${fmtTop(log.exerciseId, top)} | Sets: ${sets} | ${workLine}`);
+      out.push(`  Last: ${fmtTop(log.exerciseId, prevTop)}${prev ? ` (${fmtDate(prev.finishedAt)})` : ""}`);
+      out.push(`  Best: ${fmtTop(log.exerciseId, best)}`);
+      out.push(`  Sets logged: ${log.sets.map(s => weighted ? `${s.weightKg}kg×${s.reps}` : `${s.reps} ${unit}`).join("  |  ")}`);
       if (log.notes) out.push(`  Notes: ${log.notes}`);
       const action = await loadAction(log.exerciseId);
       if (action) out.push(`  Action next time: ${action}`);
@@ -1156,7 +1309,7 @@ function setCloudStatus(text) {
         <h4>${w.templateName}</h4>
         <div class="mini">Started: ${fmtDate(w.startedAt)}</div>
         <div class="mini">Duration: ${durMin} min</div>
-        <div class="mini">${w.cardio?.type ? `Cardio: ${w.cardio.type} ${w.cardio.mins ?? 0} min` : "Cardio: —"}</div>
+        <div class="mini">${w.cardio?.type ? `Cardio: ${w.cardio.type} ${w.cardio.mins ?? 0} min${w.cardio.distanceKm ? `, ${w.cardio.distanceKm} km` : ""}` : "Cardio: —"}</div>
         <div class="row">
           <button class="secondary" data-export="${w.id}">Export</button>
           <button class="danger" data-delete="${w.id}">Delete</button>

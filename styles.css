@@ -155,6 +155,30 @@ label.inline input{ width:18px; height:18px; }
   margin-top:10px;
 }
 
+/* v14: exercise pictograms (blue figure on black) */
+.exercise-side{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+  flex-shrink:0;
+}
+.exercise-pics{
+  display:flex;
+  gap:6px;
+}
+.ex-pic{
+  width:46px;
+  height:46px;
+  display:block;
+  border-radius:12px;
+  border:1px solid var(--line);
+}
+#modalPics .ex-pic{
+  width:56px;
+  height:56px;
+}
+
 .workout-header{
   display:flex;
   justify-content:space-between;

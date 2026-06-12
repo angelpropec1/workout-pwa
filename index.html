@@ -149,7 +149,7 @@
             <div class="meta" id="workoutMeta">—</div>
             <div class="form" style="margin-top:10px;">
               <label>
-                Total time in gym (minutes)
+                Total workout time (minutes)
                 <input id="gymMins" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 75" />
               </label>
               <label>
@@ -175,19 +175,20 @@
             Type
             <select id="cardioType">
               <option value="">— none —</option>
-              <option value="Treadmill">Treadmill</option>
-              <option value="Cross trainer">Cross trainer</option>
-              <option value="Step machine">Step machine</option>
-              <option value="Outside run">Outside run</option>
+              <option value="Running">Running</option>
             </select>
           </label>
           <label>
-            Duration (minutes)
-            <input id="cardioMins" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 20" />
+            Distance (km)
+            <input id="cardioDistance" inputmode="decimal" placeholder="e.g., 5.2" />
+          </label>
+          <label>
+            Time (minutes)
+            <input id="cardioMins" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 28" />
           </label>
           <label>
             Notes (optional)
-            <input id="cardioNotes" placeholder="speed/incline/resistance/distance etc." />
+            <input id="cardioNotes" placeholder="route / pace / how it felt" />
           </label>
           <button class="secondary" id="btnSaveCardio">Save cardio</button>
         </div>
@@ -294,6 +295,7 @@
           <h2 id="modalTitle">—</h2>
           <div class="mini" id="modalLastBest">—</div>
           <div class="mini" id="modalActionHint">—</div>
+          <div id="modalPics" style="margin-top:8px;"></div>
         </div>
         <button class="ghost" id="btnCloseModal" aria-label="Close">Close</button>
       </div>
